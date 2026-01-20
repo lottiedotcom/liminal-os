@@ -158,7 +158,7 @@
         <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
         <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
         <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
-        <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this)">
+        <input type="file" id="import-file" accept="*" style="display:none;" onchange="importData(this)">
     </div>
 
     <div id="room-editor-view" class="hidden">
