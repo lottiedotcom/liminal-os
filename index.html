@@ -2,66 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Liminal OS</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="boot-screen">
-        <p>SYSTEM BOOT...</p>
-        <h1 class="blink">[ CLICK TO INITIALIZE REALITY ]</h1>
+        <h1 class="blink">SYSTEM_READY</h1>
+        <p>[ TAP TO INITIALIZE ]</p>
     </div>
 
-    <div id="map-view" class="hidden"></div>
+    <div id="map-view" class="hidden">
+        </div>
 
     <div id="game-viewport" class="hidden">
-        <img id="room-image" src="" alt="No Signal">
+        <img id="room-image" src="" alt="Void">
         <div id="hotspot-layer"></div>
         
         <div id="room-ui">
-            <h3 id="ui-title">UNKNOWN</h3>
-            <div id="ui-sensory" class="sensory-data"></div>
+            <h3 id="ui-title">LOADING</h3>
         </div>
     </div>
 
     <div id="editor-panel" class="hidden">
-        <div class="header">
-            <h2>// REALITY_EDITOR</h2>
-            <button id="btn-back-map" class="secondary-btn" style="width:100%; padding: 5px; margin-bottom: 15px;">< EXIT TO MAP</button>
-        </div>
         
-        <label>Room Name</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="color:#00ff41; font-weight:bold;">// EDIT_MODE</span>
+            <button id="btn-back-map" style="padding:5px; margin:0;">X CLOSE</button>
+        </div>
+
+        <label>ROOM NAME</label>
         <input type="text" id="edit-name">
 
-        <label>Visual Description</label>
+        <label>DESCRIPTION</label>
         <textarea id="edit-desc" rows="3"></textarea>
 
-        <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
-            <label style="color: #fff;">// SENSORY DETAILS</label>
-            
-            <label>Smell (Olfactory)</label>
-            <input type="text" id="edit-smell" placeholder="e.g. Damp carpet, Ozone...">
+        <label>IMAGE SOURCE</label>
+        <input type="file" id="file-upload" accept="image/*" style="color:#fff;">
+        <input type="text" id="edit-image" placeholder="OR Paste URL..." style="margin-top:5px;">
 
-            <label>Sound (Audio)</label>
-            <input type="text" id="edit-sound" placeholder="e.g. Distant humming, Dripping...">
-
-            <label>Temperature</label>
-            <input type="text" id="edit-temp" placeholder="e.g. Uncomfortably Cold">
-        </div>
-
-        <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 10px;">
-            <label>Room Image</label>
-            <input type="file" id="file-upload" accept="image/*">
-            <input type="text" id="edit-image" placeholder="OR Paste Image URL..." style="margin-top:5px; font-size:10px;">
-        </div>
-
-        <button id="btn-save" style="margin-top: 20px;">[ UPDATE REALITY ]</button>
+        <button id="btn-save">[ SAVE CHANGES ]</button>
         
-        <button id="btn-create-room" class="secondary-btn" style="margin-top: auto;">+ CREATE NEW NODE</button>
+        <div style="margin-top:20px; border-top:1px dashed #333; padding-top:10px;">
+            <button id="btn-create-room" style="background:#222; border-color:#fff; color:#fff;">+ NEW EMPTY ROOM</button>
+        </div>
     </div>
 
     <script src="data.js"></script>
     <script src="app.js"></script>
 </body>
-            </html>
+</html>
