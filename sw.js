@@ -1,12 +1,13 @@
-// VERSION v3
-const CACHE_NAME = 'inbetween-v3';
+// VERSION v4 - Adds Mood Tints & Visual Updates
+const CACHE_NAME = 'inbetween-v4';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon.png'
 ];
 
-// Install Event - Forces immediate activation
+// Install Event
 self.addEventListener('install', (e) => {
   self.skipWaiting(); 
   e.waitUntil(
@@ -16,7 +17,7 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Activate Event - Deletes old v1/v2 caches
+// Activate Event
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
