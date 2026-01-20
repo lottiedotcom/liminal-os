@@ -7,8 +7,7 @@
     <style>
         /* --- 1. CLINICAL LIMINAL THEME --- */
         :root {
-            --bg: #f7fafc;             /* Clinical White */
-            --grid: #e2e8f0;           /* Faint Grey */
+            --bg: #f0f8ff;             /* Alice Blue */
             --text: #2d3748;           /* Slate */
             --accent: #38b2ac;         /* Teal */
             --accent-fade: #e6fffa;    /* Light Teal */
@@ -26,22 +25,24 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             letter-spacing: 2px; cursor: pointer;
         }
-        .pulse { animation: pulse 2s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; }
-        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        .pulse { animation: pulse 3s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; letter-spacing: 3px;}
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
-        /* --- 3. MAP VIEW (Surface Layer) --- */
+        /* --- 3. MAP VIEW (Dreamy Background) --- */
         #map-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-            background-size: 40px 40px;
+            /* DREAMY GRADIENT BACKGROUND */
+            background: linear-gradient(180deg, #d4fcff 0%, #ffffff 80%);
             z-index: 10; overflow: hidden;
         }
+        
         /* New Room Button on Map */
         .btn-surface-add {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: #fff; border: 1px solid var(--accent); color: var(--accent);
-            padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 11px;
-            box-shadow: 0 4px 15px rgba(56, 178, 172, 0.2); cursor: pointer; letter-spacing: 1px;
+            background: rgba(255,255,255,0.8); border: 1px solid var(--accent); color: var(--accent);
+            padding: 12px 30px; border-radius: 30px; font-weight: bold; font-size: 10px;
+            box-shadow: 0 5px 20px rgba(56, 178, 172, 0.15); cursor: pointer; letter-spacing: 2px;
+            backdrop-filter: blur(5px);
         }
 
         /* Map Icons */
@@ -52,15 +53,15 @@
         }
         .map-icon:active { transform: scale(0.95); }
         .icon-box {
-            width: 60px; height: 60px; background: #fff; border: 1px solid var(--border);
+            width: 60px; height: 60px; background: rgba(255,255,255,0.9); border: 1px solid #fff;
             border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 20px rgba(56, 178, 172, 0.1);
         }
         .icon-box img { width: 100%; height: 100%; object-fit: cover; }
         .icon-label {
-            margin-top: 8px; font-size: 10px; font-weight: bold; background: #fff; 
-            padding: 3px 8px; border-radius: 8px; border: 1px solid var(--border); 
-            color: var(--text); text-transform: uppercase;
+            margin-top: 8px; font-size: 9px; font-weight: bold; background: rgba(255,255,255,0.8); 
+            padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         /* --- 4. EDITOR VIEW (Deep Dive) --- */
@@ -97,7 +98,6 @@
         .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* Standard Inputs */
         input[type="text"], textarea, select {
             background: #fff; border: 1px solid var(--border); padding: 8px;
             border-radius: 4px; font-family: inherit; color: var(--text); font-size: 12px;
@@ -105,13 +105,20 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-        /* TAG INPUT SYSTEM (The Chips) */
+        /* TAG INPUT SYSTEM (Fixed) */
+        .tag-wrapper {
+            display: flex; gap: 5px;
+        }
+        .tag-add-btn {
+            background: var(--accent); color: white; border: none; border-radius: 4px;
+            width: 30px; font-weight: bold; cursor: pointer; font-size: 16px;
+        }
+
         .tag-container {
             background: #fff; border: 1px solid var(--border); padding: 4px;
             border-radius: 4px; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px;
-            cursor: text;
+            margin-bottom: 5px;
         }
-        .tag-container:focus-within { border-color: var(--accent); }
         
         .tag-chip {
             background: var(--accent-fade); color: var(--accent); border: 1px solid var(--accent);
@@ -119,12 +126,6 @@
             display: flex; align-items: center; gap: 5px;
         }
         .tag-close { cursor: pointer; font-size: 12px; opacity: 0.6; }
-        .tag-close:hover { opacity: 1; }
-        
-        .tag-input-field {
-            border: none; outline: none; font-size: 12px; flex-grow: 1; min-width: 60px;
-            padding: 4px; color: var(--text);
-        }
 
         /* Buttons */
         .btn-row { display: flex; gap: 10px; margin-top: 10px; }
@@ -137,15 +138,22 @@
             border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px;
         }
 
-        /* Hotspots */
+        /* HOTSPOTS (Minimal Arrows) */
         .hotspot {
             position: absolute; 
-            background: rgba(255, 255, 255, 0.9); border: 2px solid var(--accent);
-            color: var(--accent); font-size: 9px; font-weight: bold;
+            width: 40px; height: 40px;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 4px;
-            padding: 5px; text-align: center; line-height: 1.1;
+            cursor: pointer; 
+            font-size: 24px; color: rgba(255,255,255,0.9);
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            /* Circle outline for visibility */
+            border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
+        .hotspot:active { background: rgba(56, 178, 172, 0.5); border-color: var(--accent); }
+
     </style>
 </head>
 <body>
@@ -187,41 +195,46 @@
 
             <div class="field-group">
                 <label>Hazard Level</label>
-                <div class="tag-container" onclick="focusTag('tag-hazard')">
-                    <div id="list-hazard"></div>
-                    <input type="text" class="tag-input-field" id="tag-hazard" placeholder="Add hazard + Enter...">
+                <div class="tag-container" id="list-hazard"></div>
+                <div class="tag-wrapper">
+                    <input type="text" id="input-hazard" placeholder="Type hazard...">
+                    <button class="tag-add-btn" onclick="addTag('hazard')">+</button>
                 </div>
             </div>
 
             <div class="field-group">
                 <label>Olfactory (Smell)</label>
-                <div class="tag-container" onclick="focusTag('tag-smell')">
-                    <div id="list-smell"></div>
-                    <input type="text" class="tag-input-field" id="tag-smell" placeholder="Add smell + Enter...">
+                <div class="tag-container" id="list-smell"></div>
+                <div class="tag-wrapper">
+                    <input type="text" id="input-smell" placeholder="Type smell...">
+                    <button class="tag-add-btn" onclick="addTag('smell')">+</button>
                 </div>
             </div>
 
             <div class="field-group">
                 <label>Audio (Sound)</label>
-                <div class="tag-container" onclick="focusTag('tag-audio')">
-                    <div id="list-audio"></div>
-                    <input type="text" class="tag-input-field" id="tag-audio" placeholder="Add sound + Enter...">
+                <div class="tag-container" id="list-audio"></div>
+                <div class="tag-wrapper">
+                    <input type="text" id="input-audio" placeholder="Type sound...">
+                    <button class="tag-add-btn" onclick="addTag('audio')">+</button>
                 </div>
             </div>
 
             <div class="field-group">
                 <label>Occupants</label>
-                <div class="tag-container" onclick="focusTag('tag-occupants')">
-                    <div id="list-occupants"></div>
-                    <input type="text" class="tag-input-field" id="tag-occupants" placeholder="Add entity + Enter...">
+                <div class="tag-container" id="list-occupants"></div>
+                <div class="tag-wrapper">
+                    <input type="text" id="input-occupants" placeholder="Type occupant...">
+                    <button class="tag-add-btn" onclick="addTag('occupants')">+</button>
                 </div>
             </div>
 
             <div class="field-group">
                 <label>Remnants</label>
-                <div class="tag-container" onclick="focusTag('tag-remnants')">
-                    <div id="list-remnants"></div>
-                    <input type="text" class="tag-input-field" id="tag-remnants" placeholder="Add item + Enter...">
+                <div class="tag-container" id="list-remnants"></div>
+                <div class="tag-wrapper">
+                    <input type="text" id="input-remnants" placeholder="Type item...">
+                    <button class="tag-add-btn" onclick="addTag('remnants')">+</button>
                 </div>
             </div>
 
@@ -246,7 +259,6 @@
 
     <script>
         // --- DATA STRUCTURE ---
-        // Each room now has arrays for tags
         let world = {
             "origin": { 
                 id: "origin", parentId: null, name: "The Lobby", time: "Standard",
@@ -268,7 +280,6 @@
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
             
-            // Add Surface Room Button
             let btn = document.createElement('div');
             btn.className = 'btn-surface-add';
             btn.innerText = "+ NEW ENTRY POINT";
@@ -277,7 +288,6 @@
 
             for(let key in world) {
                 let r = world[key];
-                // ONLY SHOW SURFACE ROOMS (No Parent)
                 if(!r.parentId) {
                     let el = document.createElement('div');
                     el.className = 'map-icon';
@@ -287,7 +297,7 @@
                     let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
                     el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${r.name}</div>`;
                     
-                    setupSmartClick(el, key); // Logic for Drag/Click
+                    setupSmartClick(el, key);
                     map.appendChild(el);
                 }
             }
@@ -301,49 +311,43 @@
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
 
-            // 1. Build Breadcrumbs
             renderBreadcrumbs(id);
 
-            // 2. Populate Standard Fields
             document.getElementById('inp-name').value = r.name;
             document.getElementById('inp-time').value = r.time || "Standard";
             document.getElementById('inp-desc').value = r.desc || "";
             document.getElementById('inp-img-url').value = r.image || "";
             document.getElementById('room-img-display').src = r.image || "";
 
-            // 3. Populate Tag Fields
+            // Render Tags
             renderTags('list-hazard', r.hazards || []);
             renderTags('list-smell', r.smells || []);
             renderTags('list-audio', r.audio || []);
             renderTags('list-occupants', r.occupants || []);
             renderTags('list-remnants', r.remnants || []);
+            
+            // Clear inputs
+            ['hazard','smell','audio','occupants','remnants'].forEach(t => document.getElementById('input-'+t).value = "");
 
-            // 4. Render Visual Hotspots
             renderHotspots();
         }
 
         function createConnection() {
-            // Creates a hidden child room
             let newId = "room_" + Date.now();
             world[newId] = { 
-                id: newId, parentId: currentId, // Link to parent
+                id: newId, parentId: currentId,
                 name: "Sub-Sector", time: "Standard",
                 hazards: [], smells: [], audio: [], occupants: [], remnants: [],
                 desc: "", image: "", x: 0, y: 0, hotspots: []
             };
-
-            // Add link in current room (Defaults to Bottom Right)
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
-            
-            saveRoom(); // Save parent state
-            enterRoom(currentId); // Re-render to show box
+            saveRoom(); 
+            enterRoom(currentId); 
         }
 
         function renderBreadcrumbs(id) {
             let path = [];
             let curr = world[id];
-            
-            // Traverse up tree
             while(curr) {
                 path.unshift({id: curr.id, name: curr.name});
                 if(curr.parentId) curr = world[curr.parentId];
@@ -352,7 +356,6 @@
 
             let nav = document.getElementById('nav-bar');
             nav.innerHTML = `<span class="crumb" onclick="closeEditor()">MAP</span>`;
-            
             path.forEach(node => {
                 nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`;
             });
@@ -368,38 +371,27 @@
         function saveRoom() {
             if(!currentId) return;
             let r = world[currentId];
-            
             r.name = document.getElementById('inp-name').value;
             r.time = document.getElementById('inp-time').value;
             r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
-
-            // Tags are saved automatically when entered, but let's double check visuals update
             document.getElementById('room-img-display').src = r.image || "";
         }
 
-        // --- TAG SYSTEM LOGIC ---
-        // Setup listeners for all tag inputs
-        ['tag-hazard', 'tag-smell', 'tag-audio', 'tag-occupants', 'tag-remnants'].forEach(id => {
-            let input = document.getElementById(id);
-            let fieldName = id.replace('tag-', '');
-            // Correct field names mapping
-            let map = { 'hazard': 'hazards', 'smell': 'smells', 'audio': 'audio', 'occupants': 'occupants', 'remnants': 'remnants' };
-            let dataKey = map[fieldName];
+        // --- TAG SYSTEM (Fixed with Buttons) ---
+        function addTag(type) {
+            let input = document.getElementById('input-' + type);
+            let val = input.value.trim();
+            if(!val || !currentId) return;
 
-            input.addEventListener('keydown', function(e) {
-                if(e.key === 'Enter') {
-                    e.preventDefault();
-                    let val = this.value.trim();
-                    if(val && currentId) {
-                        if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
-                        world[currentId][dataKey].push(val);
-                        this.value = ""; // Clear input
-                        renderTags('list-' + fieldName, world[currentId][dataKey]);
-                    }
-                }
-            });
-        });
+            let map = { 'hazard': 'hazards', 'smell': 'smells', 'audio': 'audio', 'occupants': 'occupants', 'remnants': 'remnants' };
+            let dataKey = map[type];
+
+            if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
+            world[currentId][dataKey].push(val);
+            input.value = ""; 
+            renderTags('list-' + type, world[currentId][dataKey]);
+        }
 
         function renderTags(containerId, tags) {
             let container = document.getElementById(containerId);
@@ -411,19 +403,15 @@
                 chip.className = 'tag-chip';
                 chip.innerHTML = `${tag} <span class="tag-close">x</span>`;
                 chip.querySelector('.tag-close').onclick = (e) => {
-                    e.stopPropagation(); // Don't trigger focus
-                    tags.splice(index, 1); // Remove
-                    renderTags(containerId, tags); // Re-render
+                    e.stopPropagation(); 
+                    tags.splice(index, 1);
+                    renderTags(containerId, tags);
                 };
                 container.appendChild(chip);
             });
         }
 
-        function focusTag(inputId) {
-            document.getElementById(inputId).focus();
-        }
-
-        // --- HOTSPOT / DRAG LOGIC ---
+        // --- HOTSPOTS (Minimal Arrow) ---
         function renderHotspots() {
             let layer = document.getElementById('hotspot-layer');
             layer.innerHTML = "";
@@ -431,12 +419,11 @@
             if(!r.hotspots) r.hotspots = [];
 
             r.hotspots.forEach((h, idx) => {
-                let targetName = world[h.target] ? world[h.target].name : "UNKNOWN";
                 let box = document.createElement('div');
                 box.className = 'hotspot';
                 box.style.left = h.x + '%'; box.style.top = h.y + '%';
-                box.style.width = '80px'; box.style.height = '30px'; 
-                box.innerText = "-> " + targetName;
+                // Minimal Arrow
+                box.innerHTML = "↗"; 
                 
                 setupHotspotDrag(box, idx);
                 layer.appendChild(box);
@@ -445,11 +432,11 @@
 
         function setupHotspotDrag(element, index) {
             let startX, startY, isDragging = false;
-
+            // Touch
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; });
             element.addEventListener('touchmove', (e) => {
                 let x = e.touches[0].clientX; let y = e.touches[0].clientY;
-                if (Math.abs(x - startX) > 5) {
+                if (Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5) {
                     isDragging = true;
                     let rect = element.parentElement.getBoundingClientRect();
                     element.style.left = ((x - rect.left) / rect.width * 100) + '%';
@@ -457,18 +444,10 @@
                 }
             });
             element.addEventListener('touchend', (e) => {
-                if (!isDragging) {
-                    // Navigate
-                    saveRoom();
-                    enterRoom(world[currentId].hotspots[index].target);
-                } else {
-                    // Save Position
-                    world[currentId].hotspots[index].x = parseFloat(element.style.left);
-                    world[currentId].hotspots[index].y = parseFloat(element.style.top);
-                }
+                if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
+                else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); }
             });
-            
-            // Mouse support
+            // Mouse
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => {
@@ -482,19 +461,16 @@
                 document.onmouseup = () => {
                     document.onmousemove = null; document.onmouseup = null;
                     if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
-                    else {
-                        world[currentId].hotspots[index].x = parseFloat(element.style.left);
-                        world[currentId].hotspots[index].y = parseFloat(element.style.top);
-                    }
+                    else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); }
                 };
             };
         }
 
-        // --- GENERAL HELPERS ---
+        // --- HELPERS ---
         function createSurfaceRoom() {
             let id = "entry_" + Date.now();
             world[id] = { 
-                id: id, parentId: null, // No parent = Surface
+                id: id, parentId: null,
                 name: "New Entry", time: "Standard",
                 hazards: [], smells: [], audio: [], occupants: [], remnants: [],
                 desc: "", image: "", x: 100, y: 150, hotspots: [] 
@@ -504,7 +480,6 @@
 
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
-            // Simplified drag logic for map icons
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
             element.addEventListener('touchmove', (e) => {
                  if(Math.abs(e.touches[0].clientX - startX) > 5) {
@@ -515,10 +490,7 @@
             });
             element.addEventListener('touchend', () => {
                 if(!isDragging) enterRoom(id);
-                else {
-                    world[id].x = parseInt(element.style.left);
-                    world[id].y = parseInt(element.style.top);
-                }
+                else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); }
             });
             
             element.onmousedown = (e) => {
@@ -538,7 +510,6 @@
             };
         }
 
-        // File Upload
         document.getElementById('inp-file').addEventListener('change', function() {
             if(this.files && this.files[0]) {
                 let reader = new FileReader();
@@ -549,7 +520,6 @@
                 reader.readAsDataURL(this.files[0]);
             }
         });
-
     </script>
 </body>
 </html>
