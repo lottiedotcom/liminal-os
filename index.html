@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>THE INBETWEEN</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f0f8ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Inbetween">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <style>
         /* --- 1. CLINICAL LIMINAL THEME --- */
         :root {
@@ -15,7 +23,7 @@
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; touch-action: none; }
         .hidden { display: none !important; }
 
         /* --- 2. BOOT SCREEN --- */
@@ -43,7 +51,6 @@
             backdrop-filter: blur(5px);
         }
 
-        /* DATA MENU BUTTON */
         .btn-system-data {
             position: absolute; top: 20px; right: 20px;
             background: transparent; border: 1px solid var(--accent); color: var(--accent);
@@ -63,7 +70,6 @@
             color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
             font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .data-btn:hover { border-color: var(--accent); color: var(--accent); }
 
         /* Map Icons */
         .map-icon {
@@ -71,7 +77,6 @@
             display: flex; flex-direction: column; align-items: center;
             z-index: 100; cursor: pointer; transition: transform 0.1s;
         }
-        .map-icon:active { transform: scale(0.95); }
         .icon-box {
             width: 60px; height: 60px; background: rgba(255,255,255,0.9); border: 1px solid #fff;
             border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -90,7 +95,7 @@
         }
 
         #nav-bar {
-            height: 40px; background: #fff; border-bottom: 1px solid var(--grid);
+            height: 40px; background: #fff; border-bottom: 1px solid var(--border);
             display: flex; align-items: center; padding: 0 15px; gap: 5px;
             font-size: 10px; font-weight: bold; color: #a0aec0; overflow-x: auto;
         }
@@ -108,6 +113,8 @@
             height: 55%; background: #f7fafc; padding: 20px;
             display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            /* IOS Safe Area */
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .field-group { display: flex; flex-direction: column; gap: 4px; }
@@ -120,14 +127,13 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-        /* TAGS */
         .tag-wrapper { display: flex; gap: 5px; }
         .tag-add-btn { background: var(--accent); color: white; border: none; border-radius: 4px; width: 30px; font-weight: bold; cursor: pointer; font-size: 16px; }
         .tag-container { background: #fff; border: 1px solid var(--border); padding: 4px; border-radius: 4px; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
         .tag-chip { background: var(--accent-fade); color: var(--accent); border: 1px solid var(--accent); border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
         .tag-close { cursor: pointer; font-size: 12px; opacity: 0.6; }
 
-        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; margin-bottom: 30px;}
         .btn-primary { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
         .btn-connect { flex: 1; background: #2d3748; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
 
@@ -135,8 +141,6 @@
             position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
             font-size: 24px; color: rgba(255,255,255,0.9); text-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; background: rgba(0,0,0,0.1); transition: all 0.2s;
         }
-        .hotspot:active { background: rgba(56, 178, 172, 0.5); border-color: var(--accent); }
-
     </style>
 </head>
 <body>
@@ -238,14 +242,16 @@
                 <button class="btn-primary" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
-            
-            <div style="height: 20px;"></div>
         </div>
     </div>
 
     <script>
-        // --- DATA ---
-        // Default start state
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => console.log('SW Registered'));
+        }
+
+        // APP LOGIC
         let defaultWorld = {
             "origin": { 
                 id: "origin", parentId: null, name: "The Lobby", time: "Standard",
@@ -253,48 +259,34 @@
                 desc: "The beginning.", image: "", x: 150, y: 200, hotspots: [] 
             }
         };
-        
         let world = defaultWorld;
         let currentId = null;
 
-        // --- LOAD SAVE DATA ---
         function loadMemory() {
             const saved = localStorage.getItem('inbetween_data');
             if(saved) {
-                try {
-                    world = JSON.parse(saved);
-                } catch(e) {
-                    console.error("Save corrupted");
-                }
+                try { world = JSON.parse(saved); } catch(e) {}
             }
         }
+        function saveMemory() { localStorage.setItem('inbetween_data', JSON.stringify(world)); }
 
-        // --- AUTO SAVE ---
-        function saveMemory() {
-            localStorage.setItem('inbetween_data', JSON.stringify(world));
-        }
-
-        // --- STARTUP ---
         function bootUp() {
-            loadMemory(); // Load before showing map
+            loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
             renderMap();
         }
 
-        // --- MAP RENDERER ---
         function renderMap() {
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
             
-            // System Button
             let sysBtn = document.createElement('div');
             sysBtn.className = 'btn-system-data';
             sysBtn.innerText = "[ SYSTEM ]";
             sysBtn.onclick = toggleDataMenu;
             map.appendChild(sysBtn);
 
-            // New Room Button
             let btn = document.createElement('div');
             btn.className = 'btn-surface-add';
             btn.innerText = "+ NEW ENTRY POINT";
@@ -318,7 +310,6 @@
             }
         }
 
-        // --- BACKUP SYSTEM ---
         function toggleDataMenu() {
             let modal = document.getElementById('data-modal');
             if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
@@ -327,12 +318,12 @@
 
         function exportData() {
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
-            let downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "inbetween_backup.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            let node = document.createElement('a');
+            node.setAttribute("href", dataStr);
+            node.setAttribute("download", "inbetween_backup.json");
+            document.body.appendChild(node);
+            node.click();
+            node.remove();
         }
 
         function importData(input) {
@@ -346,23 +337,20 @@
                     toggleDataMenu();
                     renderMap();
                     alert("Reality Restored.");
-                } catch(err) {
-                    alert("Error: Corrupted File");
-                }
+                } catch(err) { alert("Error: Corrupted File"); }
             };
             reader.readAsText(file);
         }
 
         function resetData() {
-            if(confirm("Wipe all worlds? This cannot be undone.")) {
-                world = JSON.parse(JSON.stringify(defaultWorld)); // Clone default
+            if(confirm("Wipe all worlds?")) {
+                world = JSON.parse(JSON.stringify(defaultWorld));
                 saveMemory();
                 toggleDataMenu();
                 renderMap();
             }
         }
 
-        // --- EDITOR & LOGIC (Unchanged mostly, just added saveMemory calls) ---
         function enterRoom(id) {
             currentId = id;
             let r = world[id];
@@ -381,7 +369,6 @@
             renderTags('list-audio', r.audio || []);
             renderTags('list-occupants', r.occupants || []);
             renderTags('list-remnants', r.remnants || []);
-            
             ['hazard','smell','audio','occupants','remnants'].forEach(t => document.getElementById('input-'+t).value = "");
             renderHotspots();
         }
@@ -429,7 +416,7 @@
             r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
             document.getElementById('room-img-display').src = r.image || "";
-            saveMemory(); // AUTO SAVE TRIGGER
+            saveMemory();
         }
 
         function addTag(type) {
