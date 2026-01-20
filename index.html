@@ -5,19 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>THE INBETWEEN</title>
     <style>
-        /* --- 1. CLINICAL AESTHETIC --- */
+        /* --- 1. CLINICAL LIMINAL THEME --- */
         :root {
-            --bg-color: #f4f7f6;       /* Medical White */
-            --grid-color: #e0e6ed;     
-            --text-color: #2c3e50;     /* Dark Slate */
-            --accent-color: #38b2ac;   /* Teal */
-            --hazard-safe: #38b2ac;
-            --hazard-mid: #f6ad55;
-            --hazard-high: #e53e3e;
-            --font-main: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --bg: #f7fafc;             /* Clinical White */
+            --grid: #e2e8f0;           /* Faint Grey */
+            --text: #2d3748;           /* Slate */
+            --accent: #38b2ac;         /* Teal */
+            --accent-fade: #e6fffa;    /* Light Teal */
+            --border: #cbd5e0;
+            --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-color); color: var(--text-color); font-family: var(--font-main); overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
         .hidden { display: none !important; }
 
         /* --- 2. BOOT SCREEN --- */
@@ -25,18 +24,27 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            letter-spacing: 3px; cursor: pointer;
+            letter-spacing: 2px; cursor: pointer;
         }
-        .fade-text { animation: fadeIn 2s infinite alternate; color: var(--accent-color); font-size: 10px; margin-top: 10px; }
-        @keyframes fadeIn { from { opacity: 0.3; } to { opacity: 1; } }
+        .pulse { animation: pulse 2s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 
-        /* --- 3. MAP VIEW --- */
+        /* --- 3. MAP VIEW (Surface Layer) --- */
         #map-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
             background-size: 40px 40px;
             z-index: 10; overflow: hidden;
         }
+        /* New Room Button on Map */
+        .btn-surface-add {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #fff; border: 1px solid var(--accent); color: var(--accent);
+            padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 11px;
+            box-shadow: 0 4px 15px rgba(56, 178, 172, 0.2); cursor: pointer; letter-spacing: 1px;
+        }
+
+        /* Map Icons */
         .map-icon {
             width: 80px; height: 100px; position: absolute;
             display: flex; flex-direction: column; align-items: center;
@@ -44,128 +52,182 @@
         }
         .map-icon:active { transform: scale(0.95); }
         .icon-box {
-            width: 60px; height: 60px; background: #fff; border: 1px solid #cbd5e0;
-            border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            width: 60px; height: 60px; background: #fff; border: 1px solid var(--border);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .icon-box img { width: 100%; height: 100%; object-fit: cover; }
         .icon-label {
-            margin-top: 5px; font-size: 9px; font-weight: bold; background: #fff; 
-            padding: 2px 8px; border-radius: 10px; border: 1px solid #cbd5e0; text-transform: uppercase;
+            margin-top: 8px; font-size: 10px; font-weight: bold; background: #fff; 
+            padding: 3px 8px; border-radius: 8px; border: 1px solid var(--border); 
+            color: var(--text); text-transform: uppercase;
         }
 
-        /* --- 4. EDITOR VIEW --- */
+        /* --- 4. EDITOR VIEW (Deep Dive) --- */
         #room-editor-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; z-index: 20; display: flex; flex-direction: column;
         }
 
+        /* Breadcrumb Bar */
+        #nav-bar {
+            height: 40px; background: #fff; border-bottom: 1px solid var(--grid);
+            display: flex; align-items: center; padding: 0 15px; gap: 5px;
+            font-size: 10px; font-weight: bold; color: #a0aec0; overflow-x: auto;
+        }
+        .crumb { color: var(--accent); cursor: pointer; text-transform: uppercase; }
+        .crumb:last-child { color: var(--text); cursor: default; }
+        .crumb-arrow { color: #cbd5e0; }
+
+        /* Visual Area */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
-            border-bottom: 4px solid var(--accent-color);
+            border-bottom: 4px solid var(--accent);
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; }
 
+        /* Controls Area */
         #editor-controls {
-            height: 60%; background: #f7fafc; padding: 20px;
-            display: flex; flex-direction: column; gap: 15px; overflow-y: auto;
-            box-shadow: 0 -10px 20px rgba(0,0,0,0.05);
+            height: 55%; background: #f7fafc; padding: 20px;
+            display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
         }
 
-        /* Input Styling */
-        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .field-group { display: flex; flex-direction: column; gap: 5px; }
-        
+        /* --- FIELD STYLING --- */
+        .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        input, textarea, select {
-            background: #fff; border: 1px solid #e2e8f0; padding: 10px;
-            border-radius: 4px; font-family: inherit; color: var(--text-color); font-size: 12px;
+        /* Standard Inputs */
+        input[type="text"], textarea, select {
+            background: #fff; border: 1px solid var(--border); padding: 8px;
+            border-radius: 4px; font-family: inherit; color: var(--text); font-size: 12px;
+            width: 100%; box-sizing: border-box;
         }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        /* TAG INPUT SYSTEM (The Chips) */
+        .tag-container {
+            background: #fff; border: 1px solid var(--border); padding: 4px;
+            border-radius: 4px; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px;
+            cursor: text;
+        }
+        .tag-container:focus-within { border-color: var(--accent); }
+        
+        .tag-chip {
+            background: var(--accent-fade); color: var(--accent); border: 1px solid var(--accent);
+            border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: bold;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .tag-close { cursor: pointer; font-size: 12px; opacity: 0.6; }
+        .tag-close:hover { opacity: 1; }
+        
+        .tag-input-field {
+            border: none; outline: none; font-size: 12px; flex-grow: 1; min-width: 60px;
+            padding: 4px; color: var(--text);
+        }
 
         /* Buttons */
-        .btn-primary { background: var(--accent-color); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .btn-outline { background: transparent; color: #718096; border: 1px solid #cbd5e0; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 10px; }
-        .btn-new-room {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: #2d3748; color: #fff; padding: 10px 20px; border-radius: 30px;
-            font-size: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; z-index: 200;
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-primary { 
+            flex: 1; background: var(--accent); color: white; border: none; padding: 12px; 
+            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; 
+        }
+        .btn-connect {
+            flex: 1; background: #2d3748; color: white; border: none; padding: 12px;
+            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px;
         }
 
-        /* CONNECTION HOTSPOTS */
+        /* Hotspots */
         .hotspot {
             position: absolute; 
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid var(--accent-color);
-            color: var(--accent-color);
-            font-size: 10px; font-weight: bold;
+            background: rgba(255, 255, 255, 0.9); border: 2px solid var(--accent);
+            color: var(--accent); font-size: 9px; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            border-radius: 4px;
-            text-transform: uppercase;
+            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border-radius: 4px;
+            padding: 5px; text-align: center; line-height: 1.1;
         }
-        .hotspot:active { background: var(--accent-color); color: #fff; }
-
     </style>
 </head>
 <body>
 
     <div id="boot-screen" onclick="bootUp()">
-        <h2>THE INBETWEEN</h2>
-        <div class="fade-text">TAP TO INITIALIZE SUBJECT</div>
+        <h2 style="font-weight: 300; letter-spacing: 4px;">THE INBETWEEN</h2>
+        <div class="pulse">TOUCH TO ENTER</div>
     </div>
 
     <div id="map-view" class="hidden"></div>
 
     <div id="room-editor-view" class="hidden">
         
+        <div id="nav-bar"></div>
+
         <div id="visual-container">
             <img id="room-img-display" src="">
             <div id="hotspot-layer"></div>
-            
-            <div style="position: absolute; top: 15px; left: 15px; background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; font-size: 10px;">
-                <b id="display-name">...</b> <span id="display-hazard" style="margin-left:5px; color:#e53e3e;"></span>
-            </div>
         </div>
 
         <div id="editor-controls">
             
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px; color:#a0aec0;">// SECTOR CONFIGURATION</span>
-                <button class="btn-outline" onclick="closeEditor()">CLOSE EDITOR</button>
+            <div class="field-group">
+                <label>Room Name</label>
+                <input type="text" id="inp-name">
             </div>
 
-            <div class="input-row">
-                <div class="field-group">
-                    <label>Sector Name</label>
-                    <input type="text" id="inp-name">
-                </div>
-                <div class="field-group">
-                    <label>Hazard Level</label>
-                    <select id="inp-hazard">
-                        <option value="SAFE">SAFE (Class 0)</option>
-                        <option value="LOW">LOW (Class 1)</option>
-                        <option value="MODERATE">MODERATE (Class 2)</option>
-                        <option value="CRITICAL">CRITICAL (Class 3)</option>
-                    </select>
+            <div class="field-group">
+                <label>Time Profile</label>
+                <select id="inp-time">
+                    <option value="Standard">Standard (1:1)</option>
+                    <option value="Stagnant">Stagnant (Paused)</option>
+                    <option value="Dilated">Dilated (Slow)</option>
+                    <option value="Looping">Looping (Recursive)</option>
+                    <option value="Reverse">Reverse (Inverted)</option>
+                    <option value="Non-Linear">Non-Linear (Scattered)</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label>Hazard Level</label>
+                <div class="tag-container" onclick="focusTag('tag-hazard')">
+                    <div id="list-hazard"></div>
+                    <input type="text" class="tag-input-field" id="tag-hazard" placeholder="Add hazard + Enter...">
                 </div>
             </div>
 
-            <div class="input-row">
-                <div class="field-group">
-                    <label>Audio (Sound)</label>
-                    <input type="text" id="inp-sound" placeholder="e.g. Low hum, Silence">
+            <div class="field-group">
+                <label>Olfactory (Smell)</label>
+                <div class="tag-container" onclick="focusTag('tag-smell')">
+                    <div id="list-smell"></div>
+                    <input type="text" class="tag-input-field" id="tag-smell" placeholder="Add smell + Enter...">
                 </div>
-                <div class="field-group">
-                    <label>Olfactory (Smell)</label>
-                    <input type="text" id="inp-smell" placeholder="e.g. Ozone, Chlorine">
+            </div>
+
+            <div class="field-group">
+                <label>Audio (Sound)</label>
+                <div class="tag-container" onclick="focusTag('tag-audio')">
+                    <div id="list-audio"></div>
+                    <input type="text" class="tag-input-field" id="tag-audio" placeholder="Add sound + Enter...">
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>Occupants</label>
+                <div class="tag-container" onclick="focusTag('tag-occupants')">
+                    <div id="list-occupants"></div>
+                    <input type="text" class="tag-input-field" id="tag-occupants" placeholder="Add entity + Enter...">
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>Remnants</label>
+                <div class="tag-container" onclick="focusTag('tag-remnants')">
+                    <div id="list-remnants"></div>
+                    <input type="text" class="tag-input-field" id="tag-remnants" placeholder="Add item + Enter...">
                 </div>
             </div>
 
             <div class="field-group">
                 <label>Observation Log</label>
-                <textarea id="inp-desc" rows="2"></textarea>
+                <textarea id="inp-desc" rows="3"></textarea>
             </div>
 
             <div class="field-group">
@@ -174,23 +236,22 @@
                 <input type="hidden" id="inp-img-url">
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #e2e8f0; width: 100%;">
-
-            <div style="display:flex; gap: 10px;">
-                <button class="btn-primary" style="flex:1;" onclick="saveRoom()">UPDATE DATABASE</button>
-                <button class="btn-primary" style="background:#2d3748;" onclick="createHotspot()">+ CONNECTION</button>
+            <div class="btn-row">
+                <button class="btn-primary" onclick="saveRoom()">UPDATE DATABASE</button>
+                <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
-
-        </div>
+            
+            <div style="height: 20px;"></div> </div>
     </div>
 
     <script>
-        // --- DATA ---
+        // --- DATA STRUCTURE ---
+        // Each room now has arrays for tags
         let world = {
             "origin": { 
-                id: "origin", name: "Lobby", hazard: "SAFE", 
-                sound: "Silence", smell: "Sterile Air", desc: "Waiting area.", 
-                image: "", x: 150, y: 200, hotspots: [] 
+                id: "origin", parentId: null, name: "The Lobby", time: "Standard",
+                hazards: [], smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
+                desc: "The beginning.", image: "", x: 150, y: 200, hotspots: [] 
             }
         };
         let currentId = null;
@@ -202,134 +263,103 @@
             renderMap();
         }
 
-        // --- MAP RENDERER ---
+        // --- MAP RENDERER (Surface Only) ---
         function renderMap() {
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
             
-            // New Room Button
+            // Add Surface Room Button
             let btn = document.createElement('div');
-            btn.className = 'btn-new-room';
-            btn.innerText = "+ NEW SECTOR";
-            btn.onclick = createNewRoom;
+            btn.className = 'btn-surface-add';
+            btn.innerText = "+ NEW ENTRY POINT";
+            btn.onclick = createSurfaceRoom;
             map.appendChild(btn);
 
             for(let key in world) {
                 let r = world[key];
-                let el = document.createElement('div');
-                el.className = 'map-icon';
-                el.style.left = r.x + 'px';
-                el.style.top = r.y + 'px';
-                
-                let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
-                el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${r.name}</div>`;
-                
-                // Smart Click (Tap vs Drag)
-                setupSmartClick(el, key);
-                map.appendChild(el);
+                // ONLY SHOW SURFACE ROOMS (No Parent)
+                if(!r.parentId) {
+                    let el = document.createElement('div');
+                    el.className = 'map-icon';
+                    el.style.left = r.x + 'px';
+                    el.style.top = r.y + 'px';
+                    
+                    let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
+                    el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${r.name}</div>`;
+                    
+                    setupSmartClick(el, key); // Logic for Drag/Click
+                    map.appendChild(el);
+                }
             }
         }
 
-        // --- SMART INTERACTION (Tap to Open, Drag to Move) ---
-        function setupSmartClick(element, id, isHotspot = false) {
-            let startX, startY, isDragging = false;
-
-            // Touch Logic
-            element.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false;
-            });
-            element.addEventListener('touchmove', (e) => {
-                let x = e.touches[0].clientX; let y = e.touches[0].clientY;
-                if (Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5) {
-                    isDragging = true;
-                    // Move the element
-                    if(isHotspot) {
-                        // Percent based for hotspots
-                        let rect = element.parentElement.getBoundingClientRect();
-                        element.style.left = ((x - rect.left) / rect.width * 100) + '%';
-                        element.style.top = ((y - rect.top) / rect.height * 100) + '%';
-                    } else {
-                        // Pixel based for map icons
-                        element.style.left = (x - 40) + 'px';
-                        element.style.top = (y - 50) + 'px';
-                    }
-                }
-            });
-            element.addEventListener('touchend', (e) => {
-                if (!isDragging) {
-                    // It was a TAP
-                    if(isHotspot) {
-                        // Navigate!
-                        saveRoom(); // Save current first
-                        openEditor(element.dataset.target); // Go to next
-                    } else {
-                        openEditor(id);
-                    }
-                } else {
-                    // It was a DRAG - Save Position
-                    if(isHotspot) {
-                        // Hotspot position saving happens in saveRoom() usually, but we can update DOM
-                    } else {
-                        world[id].x = parseInt(element.style.left);
-                        world[id].y = parseInt(element.style.top);
-                    }
-                }
-            });
-
-            // Mouse Logic (Simple fallback)
-            element.onmousedown = (e) => {
-                startX = e.clientX; startY = e.clientY; isDragging = false;
-                document.onmousemove = (ev) => {
-                    if(Math.abs(ev.clientX - startX) > 5) {
-                        isDragging = true;
-                        if(isHotspot) {
-                            let rect = element.parentElement.getBoundingClientRect();
-                            element.style.left = ((ev.clientX - rect.left) / rect.width * 100) + '%';
-                            element.style.top = ((ev.clientY - rect.top) / rect.height * 100) + '%';
-                        } else {
-                            element.style.left = (ev.clientX - 40) + 'px';
-                            element.style.top = (ev.clientY - 50) + 'px';
-                        }
-                    }
-                };
-                document.onmouseup = () => {
-                    document.onmousemove = null; document.onmouseup = null;
-                    if(!isDragging) {
-                        if(isHotspot) { saveRoom(); openEditor(element.dataset.target); }
-                        else openEditor(id);
-                    } else if(!isHotspot) {
-                         world[id].x = parseInt(element.style.left);
-                         world[id].y = parseInt(element.style.top);
-                    }
-                };
-            };
-        }
-
-        // --- EDITOR LOGIC ---
-        function openEditor(id) {
-            if(!world[id]) { alert("Linked Room Missing!"); return; }
+        // --- ROOM EDITOR ---
+        function enterRoom(id) {
             currentId = id;
             let r = world[id];
 
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
 
-            // Populate Fields
-            document.getElementById('display-name').innerText = r.name;
-            document.getElementById('display-hazard').innerText = "[" + (r.hazard || "SAFE") + "]";
-            document.getElementById('room-img-display').src = r.image || "";
-            
+            // 1. Build Breadcrumbs
+            renderBreadcrumbs(id);
+
+            // 2. Populate Standard Fields
             document.getElementById('inp-name').value = r.name;
-            document.getElementById('inp-hazard').value = r.hazard || "SAFE";
-            document.getElementById('inp-sound').value = r.sound || "";
-            document.getElementById('inp-smell').value = r.smell || "";
+            document.getElementById('inp-time').value = r.time || "Standard";
             document.getElementById('inp-desc').value = r.desc || "";
             document.getElementById('inp-img-url').value = r.image || "";
+            document.getElementById('room-img-display').src = r.image || "";
 
+            // 3. Populate Tag Fields
+            renderTags('list-hazard', r.hazards || []);
+            renderTags('list-smell', r.smells || []);
+            renderTags('list-audio', r.audio || []);
+            renderTags('list-occupants', r.occupants || []);
+            renderTags('list-remnants', r.remnants || []);
+
+            // 4. Render Visual Hotspots
             renderHotspots();
         }
 
+        function createConnection() {
+            // Creates a hidden child room
+            let newId = "room_" + Date.now();
+            world[newId] = { 
+                id: newId, parentId: currentId, // Link to parent
+                name: "Sub-Sector", time: "Standard",
+                hazards: [], smells: [], audio: [], occupants: [], remnants: [],
+                desc: "", image: "", x: 0, y: 0, hotspots: []
+            };
+
+            // Add link in current room (Defaults to Bottom Right)
+            world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
+            
+            saveRoom(); // Save parent state
+            enterRoom(currentId); // Re-render to show box
+        }
+
+        function renderBreadcrumbs(id) {
+            let path = [];
+            let curr = world[id];
+            
+            // Traverse up tree
+            while(curr) {
+                path.unshift({id: curr.id, name: curr.name});
+                if(curr.parentId) curr = world[curr.parentId];
+                else curr = null;
+            }
+
+            let nav = document.getElementById('nav-bar');
+            nav.innerHTML = `<span class="crumb" onclick="closeEditor()">MAP</span>`;
+            
+            path.forEach(node => {
+                nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`;
+            });
+        }
+
         function closeEditor() {
+            saveRoom();
             document.getElementById('room-editor-view').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
             renderMap();
@@ -339,80 +369,176 @@
             if(!currentId) return;
             let r = world[currentId];
             
-            // Save Text Data
             r.name = document.getElementById('inp-name').value;
-            r.hazard = document.getElementById('inp-hazard').value;
-            r.sound = document.getElementById('inp-sound').value;
-            r.smell = document.getElementById('inp-smell').value;
+            r.time = document.getElementById('inp-time').value;
             r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
 
-            // Save Hotspot Positions
-            let container = document.getElementById('hotspot-layer');
-            Array.from(container.children).forEach((el, index) => {
-                if(r.hotspots[index]) {
-                    r.hotspots[index].x = parseFloat(el.style.left);
-                    r.hotspots[index].y = parseFloat(el.style.top);
-                }
-            });
-
-            // Update UI
-            document.getElementById('display-name').innerText = r.name;
-            document.getElementById('display-hazard').innerText = "[" + r.hazard + "]";
+            // Tags are saved automatically when entered, but let's double check visuals update
             document.getElementById('room-img-display').src = r.image || "";
         }
 
-        function createNewRoom() {
-            let id = "sector_" + Date.now();
-            world[id] = { id: id, name: "New Sector", hazard: "SAFE", image: "", x: 100, y: 100, hotspots: [] };
-            renderMap();
+        // --- TAG SYSTEM LOGIC ---
+        // Setup listeners for all tag inputs
+        ['tag-hazard', 'tag-smell', 'tag-audio', 'tag-occupants', 'tag-remnants'].forEach(id => {
+            let input = document.getElementById(id);
+            let fieldName = id.replace('tag-', '');
+            // Correct field names mapping
+            let map = { 'hazard': 'hazards', 'smell': 'smells', 'audio': 'audio', 'occupants': 'occupants', 'remnants': 'remnants' };
+            let dataKey = map[fieldName];
+
+            input.addEventListener('keydown', function(e) {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    let val = this.value.trim();
+                    if(val && currentId) {
+                        if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
+                        world[currentId][dataKey].push(val);
+                        this.value = ""; // Clear input
+                        renderTags('list-' + fieldName, world[currentId][dataKey]);
+                    }
+                }
+            });
+        });
+
+        function renderTags(containerId, tags) {
+            let container = document.getElementById(containerId);
+            container.innerHTML = "";
+            if(!tags) return;
+            
+            tags.forEach((tag, index) => {
+                let chip = document.createElement('div');
+                chip.className = 'tag-chip';
+                chip.innerHTML = `${tag} <span class="tag-close">x</span>`;
+                chip.querySelector('.tag-close').onclick = (e) => {
+                    e.stopPropagation(); // Don't trigger focus
+                    tags.splice(index, 1); // Remove
+                    renderTags(containerId, tags); // Re-render
+                };
+                container.appendChild(chip);
+            });
         }
 
-        // --- CONNECTIONS ---
-        function createHotspot() {
-            if(!currentId) return;
-            
-            // Ask for target immediately
-            let targetId = prompt("Enter ID of Target Sector (or leave blank to create new):");
-            
-            if(!targetId) {
-                // Auto-create a new room and link to it
-                let newId = "sector_" + Date.now();
-                world[newId] = { id: newId, name: "Sub-Sector", hazard: "SAFE", image: "", x: 150, y: 150, hotspots: [] };
-                targetId = newId;
-            } else if (!world[targetId]) {
-                alert("Sector ID not found.");
-                return;
-            }
-
-            // Spawn in BOTTOM RIGHT (80% top, 80% left)
-            world[currentId].hotspots.push({ target: targetId, x: 80, y: 80 });
-            renderHotspots();
+        function focusTag(inputId) {
+            document.getElementById(inputId).focus();
         }
 
+        // --- HOTSPOT / DRAG LOGIC ---
         function renderHotspots() {
             let layer = document.getElementById('hotspot-layer');
             layer.innerHTML = "";
             let r = world[currentId];
             if(!r.hotspots) r.hotspots = [];
 
-            r.hotspots.forEach((h) => {
-                let targetName = world[h.target] ? world[h.target].name : "ERROR";
+            r.hotspots.forEach((h, idx) => {
+                let targetName = world[h.target] ? world[h.target].name : "UNKNOWN";
                 let box = document.createElement('div');
                 box.className = 'hotspot';
-                box.style.left = h.x + '%'; 
-                box.style.top = h.y + '%';
-                box.style.width = '100px'; box.style.height = '40px'; 
+                box.style.left = h.x + '%'; box.style.top = h.y + '%';
+                box.style.width = '80px'; box.style.height = '30px'; 
                 box.innerText = "-> " + targetName;
-                box.dataset.target = h.target; // Store ID for logic
-
-                // Add to DOM
-                setupSmartClick(box, currentId, true);
+                
+                setupHotspotDrag(box, idx);
                 layer.appendChild(box);
             });
         }
 
-        // --- IMAGE UPLOAD ---
+        function setupHotspotDrag(element, index) {
+            let startX, startY, isDragging = false;
+
+            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; });
+            element.addEventListener('touchmove', (e) => {
+                let x = e.touches[0].clientX; let y = e.touches[0].clientY;
+                if (Math.abs(x - startX) > 5) {
+                    isDragging = true;
+                    let rect = element.parentElement.getBoundingClientRect();
+                    element.style.left = ((x - rect.left) / rect.width * 100) + '%';
+                    element.style.top = ((y - rect.top) / rect.height * 100) + '%';
+                }
+            });
+            element.addEventListener('touchend', (e) => {
+                if (!isDragging) {
+                    // Navigate
+                    saveRoom();
+                    enterRoom(world[currentId].hotspots[index].target);
+                } else {
+                    // Save Position
+                    world[currentId].hotspots[index].x = parseFloat(element.style.left);
+                    world[currentId].hotspots[index].y = parseFloat(element.style.top);
+                }
+            });
+            
+            // Mouse support
+            element.onmousedown = (e) => {
+                startX = e.clientX; isDragging = false;
+                document.onmousemove = (ev) => {
+                    if(Math.abs(ev.clientX - startX) > 5) {
+                        isDragging = true;
+                        let rect = element.parentElement.getBoundingClientRect();
+                        element.style.left = ((ev.clientX - rect.left) / rect.width * 100) + '%';
+                        element.style.top = ((ev.clientY - rect.top) / rect.height * 100) + '%';
+                    }
+                };
+                document.onmouseup = () => {
+                    document.onmousemove = null; document.onmouseup = null;
+                    if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
+                    else {
+                        world[currentId].hotspots[index].x = parseFloat(element.style.left);
+                        world[currentId].hotspots[index].y = parseFloat(element.style.top);
+                    }
+                };
+            };
+        }
+
+        // --- GENERAL HELPERS ---
+        function createSurfaceRoom() {
+            let id = "entry_" + Date.now();
+            world[id] = { 
+                id: id, parentId: null, // No parent = Surface
+                name: "New Entry", time: "Standard",
+                hazards: [], smells: [], audio: [], occupants: [], remnants: [],
+                desc: "", image: "", x: 100, y: 150, hotspots: [] 
+            };
+            renderMap();
+        }
+
+        function setupSmartClick(element, id) {
+            let startX, startY, isDragging = false;
+            // Simplified drag logic for map icons
+            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
+            element.addEventListener('touchmove', (e) => {
+                 if(Math.abs(e.touches[0].clientX - startX) > 5) {
+                     isDragging = true;
+                     element.style.left = (e.touches[0].clientX - 40) + 'px';
+                     element.style.top = (e.touches[0].clientY - 50) + 'px';
+                 }
+            });
+            element.addEventListener('touchend', () => {
+                if(!isDragging) enterRoom(id);
+                else {
+                    world[id].x = parseInt(element.style.left);
+                    world[id].y = parseInt(element.style.top);
+                }
+            });
+            
+            element.onmousedown = (e) => {
+                startX = e.clientX; isDragging = false;
+                document.onmousemove = (ev) => {
+                    if(Math.abs(ev.clientX - startX) > 5) {
+                        isDragging = true;
+                        element.style.left = (ev.clientX - 40) + 'px';
+                        element.style.top = (ev.clientY - 50) + 'px';
+                    }
+                };
+                document.onmouseup = () => {
+                    document.onmousemove = null; document.onmouseup = null;
+                    if(!isDragging) enterRoom(id);
+                    else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); }
+                };
+            };
+        }
+
+        // File Upload
         document.getElementById('inp-file').addEventListener('change', function() {
             if(this.files && this.files[0]) {
                 let reader = new FileReader();
