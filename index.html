@@ -114,7 +114,7 @@
             background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; 
             font-size: 9px; font-weight: bold; color: var(--text);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 90%;
+            max-width: 90%; text-transform: uppercase;
         }
 
         #editor-controls {
@@ -179,7 +179,7 @@
         <div id="visual-container">
             <img id="room-img-display" src="">
             <div id="hotspot-layer"></div>
-            <div id="room-stats">CLASS 0 | STABLE | NEUTRAL</div>
+            <div id="room-stats">GROUNDED | STERILE | NEUTRAL</div>
         </div>
         <div id="editor-controls">
             
@@ -189,29 +189,31 @@
             </div>
 
             <div class="field-group">
-                <label>Room Diagnostics</label>
+                <label>Liminal Diagnostics</label>
                 <div class="diag-grid">
-                    <select id="inp-safety">
-                        <option value="CLASS 0">Class 0 (Safe)</option>
-                        <option value="CLASS 1">Class 1 (Uneasy)</option>
-                        <option value="CLASS 2">Class 2 (Volatile)</option>
-                        <option value="CLASS 3">Class 3 (Critical)</option>
-                        <option value="CLASS 4">Class 4 (Quarantine)</option>
+                    <select id="inp-reality">
+                        <option value="GROUNDED">Grounded</option>
+                        <option value="TRANSITIONAL">Transitional</option>
+                        <option value="ARTIFICIAL">Artificial</option>
+                        <option value="DORMANT">Dormant</option>
+                        <option value="BUFFERED">Buffered</option>
+                        <option value="HOLLOW">Hollow</option>
                     </select>
-                    <select id="inp-stability">
-                        <option value="STABLE">Stable</option>
-                        <option value="FLUID">Fluid</option>
-                        <option value="GLITCHING">Glitching</option>
-                        <option value="DECAYING">Decaying</option>
-                        <option value="NOCLIP">Noclip Risk</option>
+                    <select id="inp-atmosphere">
+                        <option value="STERILE">Sterile</option>
+                        <option value="STAGNANT">Stagnant</option>
+                        <option value="HUMMING">Humming</option>
+                        <option value="HAZY">Hazy</option>
+                        <option value="SUBMERGED">Submerged</option>
                     </select>
-                    <select id="inp-symptom">
+                    <select id="inp-sensation">
                         <option value="NEUTRAL">Neutral</option>
-                        <option value="BRAIN FOG">Brain Fog</option>
-                        <option value="PARANOIA">Paranoia</option>
-                        <option value="MEMORY LEAK">Memory Leak</option>
-                        <option value="DISSOCIATION">Dissociation</option>
-                        <option value="EUPHORIA">Euphoria</option>
+                        <option value="KENOPSIA">Kenopsia</option>
+                        <option value="ANEMOIA">Anemoia</option>
+                        <option value="MUTED">Muted</option>
+                        <option value="WATCHED">Watched</option>
+                        <option value="JAMAIS VU">Jamais Vu</option>
+                        <option value="FLOATING">Floating</option>
                     </select>
                 </div>
             </div>
@@ -280,7 +282,6 @@
     </div>
 
     <script>
-        // PWA REGISTRATION
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(reg => {
                 reg.onupdatefound = () => {
@@ -298,7 +299,7 @@
         let defaultWorld = {
             "origin": { 
                 id: "origin", parentId: null, name: "The Lobby", 
-                time: "Standard", safety: "CLASS 0", stability: "STABLE", symptom: "NEUTRAL",
+                time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
                 desc: "The beginning.", image: "", x: 150, y: 200, hotspots: [] 
             }
@@ -402,16 +403,14 @@
             document.getElementById('room-editor-view').classList.remove('hidden');
             renderBreadcrumbs(id);
             
-            // Standard Fields
             document.getElementById('inp-name').value = r.name;
             document.getElementById('inp-time').value = r.time || "Standard";
             
             // New Diagnostics
-            document.getElementById('inp-safety').value = r.safety || "CLASS 0";
-            document.getElementById('inp-stability').value = r.stability || "STABLE";
-            document.getElementById('inp-symptom').value = r.symptom || "NEUTRAL";
+            document.getElementById('inp-reality').value = r.reality || "GROUNDED";
+            document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
+            document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
             
-            // Visual Update
             updateVisualStats(r);
 
             document.getElementById('inp-desc').value = r.desc || "";
@@ -427,10 +426,10 @@
         }
 
         function updateVisualStats(r) {
-            let saf = r.safety || "CLASS 0";
-            let sta = r.stability || "STABLE";
-            let sym = r.symptom || "NEUTRAL";
-            document.getElementById('room-stats').innerText = `${saf} | ${sta} | ${sym}`;
+            let rea = r.reality || "GROUNDED";
+            let atm = r.atmosphere || "STERILE";
+            let sen = r.sensation || "NEUTRAL";
+            document.getElementById('room-stats').innerText = `${rea} | ${atm} | ${sen}`;
         }
 
         function createConnection() {
@@ -438,7 +437,7 @@
             world[newId] = { 
                 id: newId, parentId: currentId,
                 name: "Sub-Sector", time: "Standard",
-                safety: "CLASS 0", stability: "STABLE", symptom: "NEUTRAL",
+                reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
                 smells: [], audio: [], occupants: [], remnants: [],
                 desc: "", image: "", x: 0, y: 0, hotspots: []
             };
@@ -474,9 +473,11 @@
             let r = world[currentId];
             r.name = document.getElementById('inp-name').value;
             r.time = document.getElementById('inp-time').value;
-            r.safety = document.getElementById('inp-safety').value;
-            r.stability = document.getElementById('inp-stability').value;
-            r.symptom = document.getElementById('inp-symptom').value;
+            
+            r.reality = document.getElementById('inp-reality').value;
+            r.atmosphere = document.getElementById('inp-atmosphere').value;
+            r.sensation = document.getElementById('inp-sensation').value;
+            
             r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
             
