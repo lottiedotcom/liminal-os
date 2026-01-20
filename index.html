@@ -28,15 +28,13 @@
         .pulse { animation: pulse 3s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; letter-spacing: 3px;}
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
-        /* --- 3. MAP VIEW (Dreamy Background) --- */
+        /* --- 3. MAP VIEW --- */
         #map-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* DREAMY GRADIENT BACKGROUND */
             background: linear-gradient(180deg, #d4fcff 0%, #ffffff 80%);
             z-index: 10; overflow: hidden;
         }
         
-        /* New Room Button on Map */
         .btn-surface-add {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             background: rgba(255,255,255,0.8); border: 1px solid var(--accent); color: var(--accent);
@@ -44,6 +42,28 @@
             box-shadow: 0 5px 20px rgba(56, 178, 172, 0.15); cursor: pointer; letter-spacing: 2px;
             backdrop-filter: blur(5px);
         }
+
+        /* DATA MENU BUTTON */
+        .btn-system-data {
+            position: absolute; top: 20px; right: 20px;
+            background: transparent; border: 1px solid var(--accent); color: var(--accent);
+            padding: 8px 15px; border-radius: 4px; font-weight: bold; font-size: 10px;
+            cursor: pointer; letter-spacing: 1px;
+        }
+
+        /* DATA MODAL */
+        #data-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); z-index: 200;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 15px;
+        }
+        .data-btn {
+            width: 200px; padding: 15px; background: #fff; border: 1px solid var(--border);
+            color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
+            font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .data-btn:hover { border-color: var(--accent); color: var(--accent); }
 
         /* Map Icons */
         .map-icon {
@@ -60,17 +80,15 @@
         .icon-box img { width: 100%; height: 100%; object-fit: cover; }
         .icon-label {
             margin-top: 8px; font-size: 9px; font-weight: bold; background: rgba(255,255,255,0.8); 
-            padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase;
-            letter-spacing: 1px;
+            padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase; letter-spacing: 1px;
         }
 
-        /* --- 4. EDITOR VIEW (Deep Dive) --- */
+        /* --- 4. EDITOR VIEW --- */
         #room-editor-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; z-index: 20; display: flex; flex-direction: column;
         }
 
-        /* Breadcrumb Bar */
         #nav-bar {
             height: 40px; background: #fff; border-bottom: 1px solid var(--grid);
             display: flex; align-items: center; padding: 0 15px; gap: 5px;
@@ -80,21 +98,18 @@
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
 
-        /* Visual Area */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
             border-bottom: 4px solid var(--accent);
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; }
 
-        /* Controls Area */
         #editor-controls {
             height: 55%; background: #f7fafc; padding: 20px;
             display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
         }
 
-        /* --- FIELD STYLING --- */
         .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
@@ -105,52 +120,20 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 
-        /* TAG INPUT SYSTEM (Fixed) */
-        .tag-wrapper {
-            display: flex; gap: 5px;
-        }
-        .tag-add-btn {
-            background: var(--accent); color: white; border: none; border-radius: 4px;
-            width: 30px; font-weight: bold; cursor: pointer; font-size: 16px;
-        }
-
-        .tag-container {
-            background: #fff; border: 1px solid var(--border); padding: 4px;
-            border-radius: 4px; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px;
-            margin-bottom: 5px;
-        }
-        
-        .tag-chip {
-            background: var(--accent-fade); color: var(--accent); border: 1px solid var(--accent);
-            border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: bold;
-            display: flex; align-items: center; gap: 5px;
-        }
+        /* TAGS */
+        .tag-wrapper { display: flex; gap: 5px; }
+        .tag-add-btn { background: var(--accent); color: white; border: none; border-radius: 4px; width: 30px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .tag-container { background: #fff; border: 1px solid var(--border); padding: 4px; border-radius: 4px; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+        .tag-chip { background: var(--accent-fade); color: var(--accent); border: 1px solid var(--accent); border-radius: 12px; padding: 2px 8px; font-size: 10px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
         .tag-close { cursor: pointer; font-size: 12px; opacity: 0.6; }
 
-        /* Buttons */
         .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-primary { 
-            flex: 1; background: var(--accent); color: white; border: none; padding: 12px; 
-            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; 
-        }
-        .btn-connect {
-            flex: 1; background: #2d3748; color: white; border: none; padding: 12px;
-            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px;
-        }
+        .btn-primary { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
+        .btn-connect { flex: 1; background: #2d3748; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
 
-        /* HOTSPOTS (Minimal Arrows) */
         .hotspot {
-            position: absolute; 
-            width: 40px; height: 40px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; 
-            font-size: 24px; color: rgba(255,255,255,0.9);
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            /* Circle outline for visibility */
-            border: 2px solid rgba(255,255,255,0.6);
-            border-radius: 50%;
-            background: rgba(0,0,0,0.1);
-            transition: all 0.2s;
+            position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            font-size: 24px; color: rgba(255,255,255,0.9); text-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; background: rgba(0,0,0,0.1); transition: all 0.2s;
         }
         .hotspot:active { background: rgba(56, 178, 172, 0.5); border-color: var(--accent); }
 
@@ -165,15 +148,21 @@
 
     <div id="map-view" class="hidden"></div>
 
-    <div id="room-editor-view" class="hidden">
-        
-        <div id="nav-bar"></div>
+    <div id="data-modal" class="hidden">
+        <h3 style="letter-spacing: 2px; color: #718096;">SYSTEM DATA</h3>
+        <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
+        <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
+        <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
+        <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
+        <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this)">
+    </div>
 
+    <div id="room-editor-view" class="hidden">
+        <div id="nav-bar"></div>
         <div id="visual-container">
             <img id="room-img-display" src="">
             <div id="hotspot-layer"></div>
         </div>
-
         <div id="editor-controls">
             
             <div class="field-group">
@@ -201,7 +190,6 @@
                     <button class="tag-add-btn" onclick="addTag('hazard')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>Olfactory (Smell)</label>
                 <div class="tag-container" id="list-smell"></div>
@@ -210,7 +198,6 @@
                     <button class="tag-add-btn" onclick="addTag('smell')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>Audio (Sound)</label>
                 <div class="tag-container" id="list-audio"></div>
@@ -219,7 +206,6 @@
                     <button class="tag-add-btn" onclick="addTag('audio')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>Occupants</label>
                 <div class="tag-container" id="list-occupants"></div>
@@ -228,7 +214,6 @@
                     <button class="tag-add-btn" onclick="addTag('occupants')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>Remnants</label>
                 <div class="tag-container" id="list-remnants"></div>
@@ -254,32 +239,62 @@
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
             
-            <div style="height: 20px;"></div> </div>
+            <div style="height: 20px;"></div>
+        </div>
     </div>
 
     <script>
-        // --- DATA STRUCTURE ---
-        let world = {
+        // --- DATA ---
+        // Default start state
+        let defaultWorld = {
             "origin": { 
                 id: "origin", parentId: null, name: "The Lobby", time: "Standard",
                 hazards: [], smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
                 desc: "The beginning.", image: "", x: 150, y: 200, hotspots: [] 
             }
         };
+        
+        let world = defaultWorld;
         let currentId = null;
+
+        // --- LOAD SAVE DATA ---
+        function loadMemory() {
+            const saved = localStorage.getItem('inbetween_data');
+            if(saved) {
+                try {
+                    world = JSON.parse(saved);
+                } catch(e) {
+                    console.error("Save corrupted");
+                }
+            }
+        }
+
+        // --- AUTO SAVE ---
+        function saveMemory() {
+            localStorage.setItem('inbetween_data', JSON.stringify(world));
+        }
 
         // --- STARTUP ---
         function bootUp() {
+            loadMemory(); // Load before showing map
             document.getElementById('boot-screen').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
             renderMap();
         }
 
-        // --- MAP RENDERER (Surface Only) ---
+        // --- MAP RENDERER ---
         function renderMap() {
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
             
+            // System Button
+            let sysBtn = document.createElement('div');
+            sysBtn.className = 'btn-system-data';
+            sysBtn.innerText = "[ SYSTEM ]";
+            sysBtn.onclick = toggleDataMenu;
+            map.appendChild(sysBtn);
+
+            // New Room Button
             let btn = document.createElement('div');
             btn.className = 'btn-surface-add';
             btn.innerText = "+ NEW ENTRY POINT";
@@ -303,32 +318,71 @@
             }
         }
 
-        // --- ROOM EDITOR ---
+        // --- BACKUP SYSTEM ---
+        function toggleDataMenu() {
+            let modal = document.getElementById('data-modal');
+            if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function exportData() {
+            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
+            let downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "inbetween_backup.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function importData(input) {
+            let file = input.files[0];
+            if(!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    world = JSON.parse(e.target.result);
+                    saveMemory();
+                    toggleDataMenu();
+                    renderMap();
+                    alert("Reality Restored.");
+                } catch(err) {
+                    alert("Error: Corrupted File");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetData() {
+            if(confirm("Wipe all worlds? This cannot be undone.")) {
+                world = JSON.parse(JSON.stringify(defaultWorld)); // Clone default
+                saveMemory();
+                toggleDataMenu();
+                renderMap();
+            }
+        }
+
+        // --- EDITOR & LOGIC (Unchanged mostly, just added saveMemory calls) ---
         function enterRoom(id) {
             currentId = id;
             let r = world[id];
-
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
-
             renderBreadcrumbs(id);
-
+            
             document.getElementById('inp-name').value = r.name;
             document.getElementById('inp-time').value = r.time || "Standard";
             document.getElementById('inp-desc').value = r.desc || "";
             document.getElementById('inp-img-url').value = r.image || "";
             document.getElementById('room-img-display').src = r.image || "";
 
-            // Render Tags
             renderTags('list-hazard', r.hazards || []);
             renderTags('list-smell', r.smells || []);
             renderTags('list-audio', r.audio || []);
             renderTags('list-occupants', r.occupants || []);
             renderTags('list-remnants', r.remnants || []);
             
-            // Clear inputs
             ['hazard','smell','audio','occupants','remnants'].forEach(t => document.getElementById('input-'+t).value = "");
-
             renderHotspots();
         }
 
@@ -353,7 +407,6 @@
                 if(curr.parentId) curr = world[curr.parentId];
                 else curr = null;
             }
-
             let nav = document.getElementById('nav-bar');
             nav.innerHTML = `<span class="crumb" onclick="closeEditor()">MAP</span>`;
             path.forEach(node => {
@@ -376,17 +429,15 @@
             r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
             document.getElementById('room-img-display').src = r.image || "";
+            saveMemory(); // AUTO SAVE TRIGGER
         }
 
-        // --- TAG SYSTEM (Fixed with Buttons) ---
         function addTag(type) {
             let input = document.getElementById('input-' + type);
             let val = input.value.trim();
             if(!val || !currentId) return;
-
             let map = { 'hazard': 'hazards', 'smell': 'smells', 'audio': 'audio', 'occupants': 'occupants', 'remnants': 'remnants' };
             let dataKey = map[type];
-
             if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
             world[currentId][dataKey].push(val);
             input.value = ""; 
@@ -397,7 +448,6 @@
             let container = document.getElementById(containerId);
             container.innerHTML = "";
             if(!tags) return;
-            
             tags.forEach((tag, index) => {
                 let chip = document.createElement('div');
                 chip.className = 'tag-chip';
@@ -411,20 +461,16 @@
             });
         }
 
-        // --- HOTSPOTS (Minimal Arrow) ---
         function renderHotspots() {
             let layer = document.getElementById('hotspot-layer');
             layer.innerHTML = "";
             let r = world[currentId];
             if(!r.hotspots) r.hotspots = [];
-
             r.hotspots.forEach((h, idx) => {
                 let box = document.createElement('div');
                 box.className = 'hotspot';
                 box.style.left = h.x + '%'; box.style.top = h.y + '%';
-                // Minimal Arrow
                 box.innerHTML = "↗"; 
-                
                 setupHotspotDrag(box, idx);
                 layer.appendChild(box);
             });
@@ -432,7 +478,6 @@
 
         function setupHotspotDrag(element, index) {
             let startX, startY, isDragging = false;
-            // Touch
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; });
             element.addEventListener('touchmove', (e) => {
                 let x = e.touches[0].clientX; let y = e.touches[0].clientY;
@@ -447,7 +492,6 @@
                 if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
                 else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); }
             });
-            // Mouse
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => {
@@ -466,7 +510,6 @@
             };
         }
 
-        // --- HELPERS ---
         function createSurfaceRoom() {
             let id = "entry_" + Date.now();
             world[id] = { 
@@ -475,6 +518,7 @@
                 hazards: [], smells: [], audio: [], occupants: [], remnants: [],
                 desc: "", image: "", x: 100, y: 150, hotspots: [] 
             };
+            saveMemory();
             renderMap();
         }
 
@@ -490,9 +534,8 @@
             });
             element.addEventListener('touchend', () => {
                 if(!isDragging) enterRoom(id);
-                else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); }
+                else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
             });
-            
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => {
@@ -505,7 +548,7 @@
                 document.onmouseup = () => {
                     document.onmousemove = null; document.onmouseup = null;
                     if(!isDragging) enterRoom(id);
-                    else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); }
+                    else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
                 };
             };
         }
