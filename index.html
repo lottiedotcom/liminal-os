@@ -9,73 +9,56 @@
 <body>
 
     <div id="boot-screen">
-        <div class="boot-text">
-            <p>INITIALIZING LIMINAL_OS...</p>
-            <p>LOADING GEOMETRY...</p>
-            <p class="blink">PRESS ANY KEY TO ENTER SYSTEM</p>
-        </div>
-        <button id="btn-enter-system" style="position:absolute; width:100%; height:100%; opacity:0;"></button>
+        <p>SYSTEM BOOT...</p>
+        <h1 class="blink">[ CLICK TO INITIALIZE REALITY ]</h1>
     </div>
 
-    <div id="map-view" class="hidden">
-        </div>
+    <div id="map-view" class="hidden"></div>
 
     <div id="game-viewport" class="hidden">
-        <img id="room-image" src="" alt="Reality">
+        <img id="room-image" src="" alt="No Signal">
         <div id="hotspot-layer"></div>
         
         <div id="room-ui">
-            <h3 id="ui-title">Loading...</h3>
-            <button id="btn-back-map" class="nav-btn">< BACK TO MAP</button>
+            <h3 id="ui-title">UNKNOWN</h3>
+            <div id="ui-sensory" class="sensory-data"></div>
         </div>
     </div>
 
     <div id="editor-panel" class="hidden">
         <div class="header">
-            <h2>// ARCHITECT_TERMINAL</h2>
+            <h2>// REALITY_EDITOR</h2>
+            <button id="btn-back-map" class="secondary-btn" style="width:100%; padding: 5px; margin-bottom: 15px;">< EXIT TO MAP</button>
         </div>
         
-        <div class="editor-group">
-            <label>ROOM NAME</label>
-            <input type="text" id="edit-name">
+        <label>Room Name</label>
+        <input type="text" id="edit-name">
+
+        <label>Visual Description</label>
+        <textarea id="edit-desc" rows="3"></textarea>
+
+        <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 5px;">
+            <label style="color: #fff;">// SENSORY DETAILS</label>
+            
+            <label>Smell (Olfactory)</label>
+            <input type="text" id="edit-smell" placeholder="e.g. Damp carpet, Ozone...">
+
+            <label>Sound (Audio)</label>
+            <input type="text" id="edit-sound" placeholder="e.g. Distant humming, Dripping...">
+
+            <label>Temperature</label>
+            <input type="text" id="edit-temp" placeholder="e.g. Uncomfortably Cold">
         </div>
 
-        <div class="editor-group">
-            <label>DESCRIPTION</label>
-            <textarea id="edit-desc" rows="3"></textarea>
-        </div>
-
-        <div class="editor-group">
-            <label>BACKGROUND IMAGE</label>
+        <div style="border-top: 1px solid #333; padding-top: 10px; margin-top: 10px;">
+            <label>Room Image</label>
             <input type="file" id="file-upload" accept="image/*">
-            <p style="font-size:9px; color:#666;">OR PASTE URL:</p>
-            <input type="text" id="edit-image" placeholder="https://...">
+            <input type="text" id="edit-image" placeholder="OR Paste Image URL..." style="margin-top:5px; font-size:10px;">
         </div>
 
-        <div class="editor-group">
-            <label>VIBE PRESET</label>
-            <select id="edit-theme">
-                <option value="">None</option>
-                <option value="theme-vhs">VHS</option>
-                <option value="theme-dreamcore">Dreamcore</option>
-                <option value="theme-poolrooms">Poolrooms</option>
-            </select>
-        </div>
-
-        <div class="divider"></div>
-
-        <div id="room-tools">
-            <label>ADD LINK TO OTHER ROOM</label>
-            <div style="display: flex; gap: 5px;">
-                <input type="text" id="new-link-id" placeholder="Target Room ID">
-                <button id="btn-add-link">LINK</button>
-            </div>
-        </div>
-
-        <div class="divider"></div>
-        <button id="btn-save" class="action-btn">[ SAVE CHANGES ]</button>
+        <button id="btn-save" style="margin-top: 20px;">[ UPDATE REALITY ]</button>
         
-        <button id="btn-create-room" class="action-btn" style="margin-top:10px; background:#fff; color:#000;">+ NEW ROOM ICON</button>
+        <button id="btn-create-room" class="secondary-btn" style="margin-top: auto;">+ CREATE NEW NODE</button>
     </div>
 
     <script src="data.js"></script>
