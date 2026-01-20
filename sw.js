@@ -42,8 +42,8 @@ self.addEventListener('fetch', (e) => {
 
 
 
-// VERSION v5 - Broken Clock Logic
-const CACHE_NAME = 'inbetween-v5';
+// VERSION v6 - Corrected Time Names
+const CACHE_NAME = 'inbetween-v6';
 const ASSETS = [
   './',
   './index.html',
