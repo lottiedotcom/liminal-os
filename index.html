@@ -21,7 +21,7 @@
             --accent-fade: #e6fffa;    /* Light Teal */
             --border: #cbd5e0;
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --mono: 'Courier New', Courier, monospace; /* For Clock */
+            --mono: 'Courier New', Courier, monospace;
         }
 
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; touch-action: none; }
@@ -140,7 +140,6 @@
             max-width: 90%; text-transform: uppercase;
         }
 
-        /* NEW BROKEN CLOCK */
         #liminal-clock {
             position: absolute; top: 15px; right: 15px;
             background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 4px;
@@ -214,6 +213,16 @@
     <div id="dict-modal" class="hidden">
         <div id="dict-content">
             <h2 style="text-align:center; font-weight:300; letter-spacing:2px; margin-bottom:30px;">LEXICON</h2>
+
+            <div class="dict-section">
+                <div class="dict-title">TEMPORAL STATE (TIME)</div>
+                <div class="dict-term">STANDARD</div><div class="dict-def">Baseline temporal flow. 1:1 with reality.</div>
+                <div class="dict-term">STAGNANT</div><div class="dict-def">Absolute zero temporal movement. Stagnation.</div>
+                <div class="dict-term">DILATED</div><div class="dict-def">Unstable time stream. Skips and jumps unpredictably.</div>
+                <div class="dict-term">LOOPING</div><div class="dict-def">Closed loop system. Repetitive events. 11:11 syndrome.</div>
+                <div class="dict-term">REVERSE</div><div class="dict-def">Inverted flow. Events happen in reverse order.</div>
+                <div class="dict-term">NON-LINEAR</div><div class="dict-def">Fatal error. Time has shattered into non-linear shards.</div>
+            </div>
 
             <div class="dict-section">
                 <div class="dict-title">REALITY (PHYSICAL STATE)</div>
@@ -294,14 +303,14 @@
             </div>
 
             <div class="field-group">
-                <label>Time Profile</label>
+                <label>Temporal State</label>
                 <select id="inp-time">
-                    <option value="Standard">Standard (1:1)</option>
-                    <option value="Stagnant">Stagnant (Paused)</option>
-                    <option value="Dilated">Dilated (Slow)</option>
-                    <option value="Looping">Looping (Recursive)</option>
-                    <option value="Reverse">Reverse (Inverted)</option>
-                    <option value="Non-Linear">Non-Linear (Scattered)</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Stagnant">Stagnant</option>
+                    <option value="Dilated">Dilated</option>
+                    <option value="Looping">Looping</option>
+                    <option value="Reverse">Reverse</option>
+                    <option value="Non-Linear">Non-Linear</option>
                 </select>
             </div>
 
@@ -398,7 +407,7 @@
             renderMap();
         }
 
-        // --- CLOCK LOGIC ---
+        // --- CLOCK LOGIC (UPDATED WITH CORRECT NAMES) ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             clockInterval = setInterval(() => {
