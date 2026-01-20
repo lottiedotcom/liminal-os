@@ -1,14 +1,14 @@
-// vs
-const CACHE_NAME = 'inbetween-v2';
+// VERSION v3
+const CACHE_NAME = 'inbetween-v3';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-// Install Event
+// Install Event - Forces immediate activation
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // FORCE NEW VERSION IMMEDIATELY
+  self.skipWaiting(); 
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -16,7 +16,7 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Activate Event (Clean up old cache)
+// Activate Event - Deletes old v1/v2 caches
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keyList) => {
