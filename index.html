@@ -3,53 +3,389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Liminal OS</title>
-    <link rel="stylesheet" href="style.css">
+    <title>The Inbetween</title>
+    <style>
+        /* --- 1. CLINICAL AESTHETIC --- */
+        :root {
+            /* The "Hospital" Palette */
+            --bg-color: #f0f4f8;       /* Very pale clinical blue/white */
+            --grid-color: #d9e2ec;     /* Subtle grid lines */
+            --text-color: #334e68;     /* Dark Slate Blue (Readable) */
+            --accent-color: #38b2ac;   /* Teal/Cyan (Medical scrubs color) */
+            --panel-bg: #ffffff;       /* Pure White */
+            --border-color: #bcccdc;   /* Light Blue-Grey */
+            --font-main: 'Helvetica Neue', Arial, sans-serif; /* Clean, sans-serif */
+        }
+
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: var(--font-main); 
+            overflow: hidden; 
+        }
+        
+        .hidden { display: none !important; }
+
+        /* --- 2. BOOT SCREEN (Start) --- */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--text-color); cursor: pointer; text-align: center;
+            letter-spacing: 2px;
+        }
+        .fade-pulse { animation: pulse 2s infinite; color: var(--accent-color); }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        /* --- 3. MAP VIEW (The Desktop) --- */
+        #map-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            /* Clinical Graph Paper Look */
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-color: var(--bg-color);
+            z-index: 10; 
+            overflow: hidden;
+        }
+
+        /* The Icons */
+        .map-icon {
+            width: 80px; height: 100px; position: absolute;
+            display: flex; flex-direction: column; align-items: center;
+            z-index: 100; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .map-icon:active { transform: scale(0.95); }
+
+        .icon-box {
+            width: 60px; height: 60px; 
+            background: #fff; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Soft shadow */
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            border-radius: 4px;
+        }
+        .icon-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .icon-label {
+            margin-top: 5px; 
+            background: #fff; 
+            color: var(--text-color); 
+            font-size: 10px; 
+            padding: 2px 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* --- 4. ROOM EDITOR (Overlay) --- */
+        #room-editor-view {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--panel-bg); 
+            z-index: 20; 
+            display: flex; flex-direction: column;
+        }
+
+        /* Top Half: Visuals */
+        #visual-container {
+            flex-grow: 1; position: relative; 
+            background: #000; /* Images look better on black */
+            border-bottom: 4px solid var(--accent-color);
+        }
+        #room-img-display { width: 100%; height: 100%; object-fit: contain; opacity: 1; }
+
+        /* Bottom Half: Controls */
+        #editor-controls {
+            height: 55%; 
+            background: #f7f9fb; 
+            padding: 20px;
+            display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+        }
+
+        /* Inputs & Buttons - Clean Style */
+        .input-group { margin-bottom: 5px; }
+        label { 
+            display: block; font-size: 10px; color: #829ab1; 
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+        }
+        input, textarea {
+            background: #fff; 
+            border: 1px solid var(--border-color); 
+            color: var(--text-color);
+            padding: 12px; width: 100%; box-sizing: border-box; 
+            font-family: inherit; border-radius: 4px;
+        }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent-color); }
+
+        button {
+            background: #fff; 
+            border: 1px solid var(--accent-color); 
+            color: var(--accent-color);
+            padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+            border-radius: 4px; letter-spacing: 1px;
+        }
+        button:hover { background: var(--accent-color); color: #fff; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .close-btn { border-color: #e1e1e1; color: #999; }
+
+        /* Hotspots */
+        .hotspot {
+            position: absolute; border: 2px solid #fff; background: rgba(56, 178, 172, 0.3);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            border-radius: 50%; /* Circles feel more organic/clinical */
+        }
+    </style>
 </head>
 <body>
 
-    <div id="boot-screen">
-        <h1 class="blink">SYSTEM_READY</h1>
-        <p>[ TAP TO INITIALIZE ]</p>
+    <div id="boot-screen" onclick="bootUp()">
+        <h2 style="font-weight: 300;">THE INBETWEEN</h2>
+        <p class="fade-pulse" style="font-size: 10px;">[ TOUCH TO ENTER ]</p>
     </div>
 
     <div id="map-view" class="hidden">
         </div>
 
-    <div id="game-viewport" class="hidden">
-        <img id="room-image" src="" alt="Void">
-        <div id="hotspot-layer"></div>
+    <div id="room-editor-view" class="hidden">
         
-        <div id="room-ui">
-            <h3 id="ui-title">LOADING</h3>
+        <div id="visual-container">
+            <img id="room-img-display" src="">
+            <div id="hotspot-layer"></div>
+            <div style="position:absolute; top:15px; left:15px; background:rgba(255,255,255,0.9); padding:5px 10px; border-radius:20px; color:#333; font-size:10px; font-weight:bold;">
+                <span id="display-name">...</span>
+            </div>
+        </div>
+
+        <div id="editor-controls">
+            <div class="header-bar">
+                <span style="color:#829ab1; font-size:12px;">// EDIT RECORD</span>
+                <button class="close-btn" onclick="closeEditor()" style="padding:8px 15px;">CLOSE</button>
+            </div>
+
+            <div class="input-group">
+                <label>Designation (Name)</label>
+                <input type="text" id="inp-name">
+            </div>
+
+            <div class="input-group">
+                <label>Observation (Description)</label>
+                <textarea id="inp-desc" rows="2"></textarea>
+            </div>
+
+            <div class="input-group">
+                <label>Visual File</label>
+                <div style="display:flex; gap:5px;">
+                    <input type="file" id="inp-file" accept="image/*" style="padding:8px; font-size:10px;">
+                </div>
+                <input type="hidden" id="inp-img-url"> 
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                <button onclick="saveRoom()" style="background:var(--accent-color); color:#fff;">SAVE</button>
+                <button onclick="createHotspot()">+ CONNECTION</button>
+            </div>
         </div>
     </div>
 
-    <div id="editor-panel" class="hidden">
-        
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <span style="color:#00ff41; font-weight:bold;">// EDIT_MODE</span>
-            <button id="btn-back-map" style="padding:5px; margin:0;">X CLOSE</button>
-        </div>
+    <script>
+        // --- 1. DATA (The Brain) ---
+        let world = {
+            "origin": { id: "origin", name: "Reception", desc: "The air is cold.", image: "", x: 120, y: 200, hotspots: [] }
+        };
+        let currentId = null;
 
-        <label>ROOM NAME</label>
-        <input type="text" id="edit-name">
+        // --- 2. STARTUP ---
+        function bootUp() {
+            document.getElementById('boot-screen').classList.add('hidden');
+            document.getElementById('map-view').classList.remove('hidden');
+            renderMap();
+        }
 
-        <label>DESCRIPTION</label>
-        <textarea id="edit-desc" rows="3"></textarea>
+        // --- 3. MAP LOGIC ---
+        function renderMap() {
+            const map = document.getElementById('map-view');
+            map.innerHTML = ""; 
+            
+            // "New Room" Button (Floating Pill Style)
+            let newBtn = document.createElement('div');
+            newBtn.innerText = "+ NEW ROOM";
+            newBtn.style.cssText = "position:absolute; bottom:30px; left:50%; transform:translateX(-50%); background:#fff; padding:10px 20px; border-radius:20px; box-shadow:0 5px 15px rgba(0,0,0,0.1); cursor:pointer; color:var(--text-color); font-size:12px; font-weight:bold; z-index:200;";
+            newBtn.onclick = createNewRoom;
+            map.appendChild(newBtn);
 
-        <label>IMAGE SOURCE</label>
-        <input type="file" id="file-upload" accept="image/*" style="color:#fff;">
-        <input type="text" id="edit-image" placeholder="OR Paste URL..." style="margin-top:5px;">
+            for(let key in world) {
+                let r = world[key];
+                let el = document.createElement('div');
+                el.className = 'map-icon';
+                el.style.left = r.x + 'px';
+                el.style.top = r.y + 'px';
+                
+                let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#ccc; font-size:20px;">+</span>`;
+                el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${r.name}</div>`;
+                
+                // --- THE "SINGLE CLICK" FIX ---
+                // We detect if you moved the mouse/finger. 
+                // If NO movement, it's a click. If MOVEMENT, it's a drag.
+                setupSmartClick(el, key);
 
-        <button id="btn-save">[ SAVE CHANGES ]</button>
-        
-        <div style="margin-top:20px; border-top:1px dashed #333; padding-top:10px;">
-            <button id="btn-create-room" style="background:#222; border-color:#fff; color:#fff;">+ NEW EMPTY ROOM</button>
-        </div>
-    </div>
+                map.appendChild(el);
+            }
+        }
 
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+        function setupSmartClick(element, id) {
+            let startX, startY, isDragging = false;
+
+            // Touch Start
+            element.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                isDragging = false;
+            });
+
+            // Touch Move (Did we move more than 5 pixels?)
+            element.addEventListener('touchmove', (e) => {
+                let moveX = e.touches[0].clientX;
+                let moveY = e.touches[0].clientY;
+                if (Math.abs(moveX - startX) > 5 || Math.abs(moveY - startY) > 5) {
+                    isDragging = true;
+                    // Handle visuals for dragging
+                    element.style.left = (moveX - 40) + 'px'; // Center on finger
+                    element.style.top = (moveY - 50) + 'px';
+                }
+            });
+
+            // Touch End
+            element.addEventListener('touchend', (e) => {
+                if (!isDragging) {
+                    // IT WAS A TAP! OPEN IMMEDIATELY.
+                    openEditor(id);
+                } else {
+                    // IT WAS A DRAG. SAVE POSITION.
+                    world[id].x = parseInt(element.style.left);
+                    world[id].y = parseInt(element.style.top);
+                }
+            });
+
+            // Mouse Support (For testing on PC)
+            element.onmousedown = (e) => {
+                startX = e.clientX; startY = e.clientY; isDragging = false;
+                
+                document.onmousemove = (ev) => {
+                    if(Math.abs(ev.clientX - startX) > 5) {
+                        isDragging = true;
+                        element.style.left = (ev.clientX - 40) + 'px';
+                        element.style.top = (ev.clientY - 50) + 'px';
+                    }
+                };
+                
+                document.onmouseup = () => {
+                    document.onmousemove = null; document.onmouseup = null;
+                    if(!isDragging) openEditor(id);
+                    else {
+                        world[id].x = parseInt(element.style.left);
+                        world[id].y = parseInt(element.style.top);
+                    }
+                };
+            };
+        }
+
+        // --- 4. EDITOR LOGIC ---
+        function openEditor(id) {
+            currentId = id;
+            let r = world[id];
+
+            document.getElementById('map-view').classList.add('hidden');
+            document.getElementById('room-editor-view').classList.remove('hidden');
+
+            // Load Data
+            document.getElementById('display-name').innerText = r.name;
+            document.getElementById('room-img-display').src = r.image || "";
+            document.getElementById('inp-name').value = r.name;
+            document.getElementById('inp-desc').value = r.desc;
+            document.getElementById('inp-img-url').value = r.image || "";
+
+            renderHotspots();
+        }
+
+        function closeEditor() {
+            document.getElementById('room-editor-view').classList.add('hidden');
+            document.getElementById('map-view').classList.remove('hidden');
+            renderMap(); 
+        }
+
+        function saveRoom() {
+            if(!currentId) return;
+            let r = world[currentId];
+            r.name = document.getElementById('inp-name').value;
+            r.desc = document.getElementById('inp-desc').value;
+            r.image = document.getElementById('inp-img-url').value;
+            
+            // Visual feedback
+            let btn = document.querySelector('button[onclick="saveRoom()"]');
+            let originalText = btn.innerText;
+            btn.innerText = "SAVED";
+            setTimeout(() => btn.innerText = originalText, 1000);
+            
+            // Refresh visuals without closing
+            document.getElementById('display-name').innerText = r.name;
+            document.getElementById('room-img-display').src = r.image || "";
+        }
+
+        function createNewRoom() {
+            let id = "room_" + Date.now();
+            world[id] = { id: id, name: "New Room", desc: "", image: "", x: 100, y: 100, hotspots: [] };
+            renderMap();
+        }
+
+        function createHotspot() {
+             if(!currentId) return;
+             world[currentId].hotspots.push({ target: currentId, x: 50, y: 50 });
+             renderHotspots();
+        }
+
+        function renderHotspots() {
+            let layer = document.getElementById('hotspot-layer');
+            layer.innerHTML = "";
+            let r = world[currentId];
+            if(!r.hotspots) r.hotspots = [];
+
+            r.hotspots.forEach((h) => {
+                let box = document.createElement('div');
+                box.className = 'hotspot';
+                box.style.left = h.x + '%'; box.style.top = h.y + '%';
+                box.style.width = '30px'; box.style.height = '30px'; // Fixed circle size
+                box.innerText = "->";
+                
+                // Click to link
+                box.onclick = (e) => {
+                    e.stopPropagation(); // Don't trigger other clicks
+                    let dest = prompt("Enter Room ID to link to (e.g., origin):", h.target);
+                    if(dest) { h.target = dest; saveRoom(); }
+                };
+                
+                layer.appendChild(box);
+            });
+        }
+
+        // --- 5. IMAGE UPLOAD ---
+        document.getElementById('inp-file').addEventListener('change', function() {
+            if(this.files && this.files[0]) {
+                let reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('inp-img-url').value = e.target.result;
+                    saveRoom(); // Auto save on upload
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+    </script>
 </body>
 </html>
