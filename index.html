@@ -70,6 +70,25 @@
             color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
             font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
+        
+        /* DICTIONARY MODAL */
+        #dict-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 300; display: flex; flex-direction: column;
+        }
+        #dict-content {
+            flex-grow: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px;
+        }
+        .dict-section { margin-bottom: 25px; }
+        .dict-title { font-size: 12px; font-weight: bold; color: var(--accent); letter-spacing: 2px; border-bottom: 1px solid var(--grid); padding-bottom: 5px; margin-bottom: 10px; }
+        .dict-term { font-size: 11px; font-weight: bold; color: var(--text); margin-top: 10px; text-transform: uppercase; }
+        .dict-def { font-size: 11px; color: #718096; line-height: 1.4; margin-left: 10px; }
+        .dict-close {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--text); color: #fff; padding: 10px 30px; border-radius: 30px;
+            font-size: 10px; font-weight: bold; border: none; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
 
         /* Map Icons */
         .map-icon {
@@ -167,11 +186,49 @@
 
     <div id="data-modal" class="hidden">
         <h3 style="letter-spacing: 2px; color: #718096;">SYSTEM DATA</h3>
+        <button class="data-btn" onclick="toggleDictionary()">DICTIONARY</button> 
         <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
         <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
         <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
         <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
         <input type="file" id="import-file" style="display:none;" onchange="importData(this)">
+    </div>
+
+    <div id="dict-modal" class="hidden">
+        <div id="dict-content">
+            <h2 style="text-align:center; font-weight:300; letter-spacing:2px; margin-bottom:30px;">LEXICON</h2>
+
+            <div class="dict-section">
+                <div class="dict-title">REALITY (PHYSICAL STATE)</div>
+                <div class="dict-term">GROUNDED</div><div class="dict-def">1:1 with baseline reality. Physically stable.</div>
+                <div class="dict-term">TRANSITIONAL</div><div class="dict-def">A space of movement (hallways, stairs). Not a destination.</div>
+                <div class="dict-term">ARTIFICIAL</div><div class="dict-def">Constructed reality. Too clean. Simulation-like quality.</div>
+                <div class="dict-term">DORMANT</div><div class="dict-def">Asleep. Waiting for an observer to exist.</div>
+                <div class="dict-term">BUFFERED</div><div class="dict-def">High latency. Air feels thick or static. Slow physics.</div>
+                <div class="dict-term">HOLLOW</div><div class="dict-def">Visuals without substance. Empty behind the surfaces.</div>
+            </div>
+
+            <div class="dict-section">
+                <div class="dict-title">ATMOSPHERE (ENVIRONMENT)</div>
+                <div class="dict-term">STERILE</div><div class="dict-def">Devoid of life. Clinical cleanliness. Bright.</div>
+                <div class="dict-term">STAGNANT</div><div class="dict-def">Air has not moved in decades. Dust is suspended in time.</div>
+                <div class="dict-term">HUMMING</div><div class="dict-def">Low-frequency mechanical or electrical drone.</div>
+                <div class="dict-term">HAZY</div><div class="dict-def">Soft focus. Dream logic visual impairment. Fog.</div>
+                <div class="dict-term">SUBMERGED</div><div class="dict-def">Sensation of being underwater. Muffled and slow.</div>
+            </div>
+
+            <div class="dict-section">
+                <div class="dict-title">SENSATION (EMOTIONAL WEIGHT)</div>
+                <div class="dict-term">NEUTRAL</div><div class="dict-def">Baseline emotional state. No affect.</div>
+                <div class="dict-term">KENOPSIA</div><div class="dict-def">The eerie atmosphere of a place that’s usually bustling with people but is now abandoned.</div>
+                <div class="dict-term">ANEMOIA</div><div class="dict-def">Nostalgia for a time or place you’ve never known.</div>
+                <div class="dict-term">MUTED</div><div class="dict-def">Sensory dampening. Sounds are swallowed by the walls.</div>
+                <div class="dict-term">WATCHED</div><div class="dict-def">The architecture itself is observing you. Scopaesthesia.</div>
+                <div class="dict-term">JAMAIS VU</div><div class="dict-def">The opposite of Déjà vu. A familiar place feels unrecognizable.</div>
+                <div class="dict-term">FLOATING</div><div class="dict-def">Dissociation. Detachment from physical form.</div>
+            </div>
+        </div>
+        <button class="dict-close" onclick="toggleDictionary()">CLOSE LEXICON</button>
     </div>
 
     <div id="room-editor-view" class="hidden">
@@ -361,6 +418,12 @@
             else modal.classList.add('hidden');
         }
 
+        function toggleDictionary() {
+            let dict = document.getElementById('dict-modal');
+            if(dict.classList.contains('hidden')) dict.classList.remove('hidden');
+            else dict.classList.add('hidden');
+        }
+
         function exportData() {
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
             let node = document.createElement('a');
@@ -406,7 +469,6 @@
             document.getElementById('inp-name').value = r.name;
             document.getElementById('inp-time').value = r.time || "Standard";
             
-            // New Diagnostics
             document.getElementById('inp-reality').value = r.reality || "GROUNDED";
             document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
             document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
