@@ -113,7 +113,6 @@
             height: 55%; background: #f7fafc; padding: 20px;
             display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-            /* IOS Safe Area */
             padding-bottom: env(safe-area-inset-bottom);
         }
 
@@ -158,7 +157,7 @@
         <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
         <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
         <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
-        <input type="file" id="import-file" accept="*" style="display:none;" onchange="importData(this)">
+        <input type="file" id="import-file" style="display:none;" onchange="importData(this)">
     </div>
 
     <div id="room-editor-view" class="hidden">
@@ -246,9 +245,20 @@
     </div>
 
     <script>
-        // PWA REGISTRATION
+        // PWA REGISTRATION (FORCE UPDATE)
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(() => console.log('SW Registered'));
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                reg.onupdatefound = () => {
+                    const installingWorker = reg.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New update available
+                            console.log('New content is available; please refresh.');
+                            window.location.reload(); 
+                        }
+                    };
+                };
+            });
         }
 
         // APP LOGIC
@@ -337,7 +347,7 @@
                     toggleDataMenu();
                     renderMap();
                     alert("Reality Restored.");
-                } catch(err) { alert("Error: Corrupted File"); }
+                } catch(err) { alert("Error: Corrupted File. Try exporting a new backup first."); }
             };
             reader.readAsText(file);
         }
