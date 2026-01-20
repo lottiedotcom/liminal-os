@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liminal OS // Architect Terminal</title>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="game-viewport">
+        <img id="room-image" src="" alt="Current Reality">
+        
+        <div id="hotspot-layer"></div>
+
+        <div id="room-ui">
+            <h3 id="ui-title">Loading...</h3>
+            <p id="ui-desc">Initializing connection...</p>
+        </div>
+    </div>
+
+    <div id="editor-panel">
+        <div class="header">
+            <h2>// ARCHITECT_TERMINAL</h2>
+            <div class="status-light"></div>
+        </div>
+        
+        <div class="editor-group">
+            <label>ROOM ID (Read Only)</label>
+            <input type="text" id="edit-id" readonly>
+        </div>
+
+        <div class="editor-group">
+            <label>ROOM NAME</label>
+            <input type="text" id="edit-name">
+        </div>
+
+        <div class="editor-group">
+            <label>DESCRIPTION</label>
+            <textarea id="edit-desc" rows="4"></textarea>
+        </div>
+
+        <div class="editor-group">
+            <label>IMAGE SOURCE (URL)</label>
+            <input type="text" id="edit-image" placeholder="https://...">
+        </div>
+
+        <div class="editor-group">
+            <label>✨ VIBE PRESET (Filter)</label>
+            <select id="edit-theme">
+                <option value="">Raw Footage (None)</option>
+                <option value="theme-vhs">VHS Found Footage</option>
+                <option value="theme-dreamcore">Dreamcore (Ethereal)</option>
+                <option value="theme-poolrooms">Poolrooms (Sterile)</option>
+                <option value="theme-void">The Void (Darkness)</option>
+            </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="editor-group">
+            <label>CREATE CONNECTION</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="new-link-id" placeholder="Target Room ID">
+                <button id="btn-add-link">LINK</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <button id="btn-save" class="action-btn">[ SAVE REALITY ]</button>
+
+        <div class="debug-area">
+            <label>SYSTEM DATA:</label>
+            <div id="json-preview"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
