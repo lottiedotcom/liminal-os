@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v14.0-FINAL-AUDIO';
+const CACHE_NAME = 'inbetween-v16.0-UI-REORDER';
 const ASSETS = [
   './',
   './index.html',
