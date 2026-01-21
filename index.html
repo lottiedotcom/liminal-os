@@ -707,8 +707,8 @@
                 return 0;
             }
             let diff = Date.now() - r.lastVisited;
-            // CHANGED: 6 Hours for full decay (fits the 4-8 hour request)
-            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
+            // 5 minutes for full decay
+            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100));
             return decayPercent;
         }
 
