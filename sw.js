@@ -1,5 +1,5 @@
-// VERSION v14 - Tuner Mechanic Update
-const CACHE_NAME = 'inbetween-v14';
+// VERSION v19 - Slower Decay Update
+const CACHE_NAME = 'inbetween-v19';
 const ASSETS = [
   './',
   './index.html',
