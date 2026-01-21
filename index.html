@@ -20,7 +20,7 @@
             --accent: #38b2ac;         /* Teal */
             --accent-fade: #e6fffa;    /* Light Teal */
             --border: #cbd5e0;
-            --danger: #3d302f;         /* Red for Mr. Other */
+            --danger: #260808;         /* Red for Mr. Other */
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
@@ -304,6 +304,13 @@
             </div>
 
             <div class="field-group">
+                <label>Audio Artifact</label>
+                <input type="file" id="inp-audio" accept="audio/*,video/*">
+                <div id="audio-status" style="font-size:10px; color:#718096; margin-top:4px;">NO ARTIFACT FOUND.</div>
+                <button onclick="clearCustomAudio()" style="margin-top:5px; background:transparent; border:1px solid #cbd5e0; font-size:9px; padding:4px;">PURGE ARTIFACT</button>
+            </div>
+
+            <div class="field-group">
                 <label>Liminal Diagnostics</label>
                 <div class="diag-grid">
                     <select id="inp-reality" onchange="explainTerm(this.value)">
@@ -408,6 +415,7 @@
         const SystemAudio = {
             ctx: null, ambienceSrc: null, ambienceGain: null, masterFilter: null,
             pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
+            customAudio: null,
 
             init() {
                 if (this.ctx) return;
@@ -423,6 +431,11 @@
                 this.masterFilter.frequency.value = 400; 
                 this.ambienceGain.connect(this.masterFilter);
                 this.masterFilter.connect(this.ctx.destination);
+                
+                // Custom Audio Element (Invisible)
+                this.customAudio = document.createElement('audio');
+                this.customAudio.loop = true;
+                document.body.appendChild(this.customAudio);
             },
 
             resume() { if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
@@ -454,6 +467,9 @@
 
             startAmbience(buffer, volume, fadeTime = 1.0) {
                 if(!this.ctx) return;
+                // If custom audio is playing, DO NOT start ambience
+                if(this.customAudio && !this.customAudio.paused) return;
+
                 if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); }
                 this.ambienceSrc = this.ctx.createBufferSource();
                 this.ambienceSrc.buffer = buffer;
@@ -465,14 +481,28 @@
             
             stopAll() {
                 if(!this.ctx) return;
+                // Fade out ambience
                 this.ambienceGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
                 setTimeout(() => { if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; } }, 200);
+                
+                // Stop custom audio
+                if(this.customAudio) {
+                    this.customAudio.pause();
+                    this.customAudio.currentTime = 0;
+                }
             },
 
             playOSAmbience() { this.startAmbience(this.brownBuffer, 0.15); },
 
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
+                
+                // If room has custom audio, ignore the noise generator
+                if(world[currentId].audioData) {
+                    this.playCustom(world[currentId].audioData);
+                    return;
+                }
+
                 const r = world[currentId];
                 const mode = r.time || "Standard";
                 let buffer = this.pinkBuffer; let vol = 0.1; 
@@ -482,8 +512,22 @@
                 this.startAmbience(buffer, vol, 0.5);
             },
             
+            playCustom(src) {
+                // Kill ambience first
+                if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc = null; }
+                this.ambienceGain.gain.value = 0;
+                
+                this.customAudio.src = src;
+                this.customAudio.play().catch(e => console.log("Audio play error", e));
+            },
+            
+            playPurge() {
+                // Removed snare sound. Visual ripple only.
+            },
+            
             setVolume(level) {
                 if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
+                if(this.customAudio) this.customAudio.volume = Math.min(1, level * 3); // Approximate boost
             }
         };
 
@@ -494,31 +538,23 @@
 
         // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE (RESTORED) ---
         const VOCAB = {
-            // General
             subjects: ["THE STATIC", "IT", "WE", "A GHOST", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "THE PULSE"],
             verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS"],
             objects: ["YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "THE EXIT", "HOPE", "FEAR", "THE TRUTH", "A LIE", "THE BLOOD", "THE GLASS", "FOREVER", "US"],
-            
-            // Specific Themes
             winter_nouns: ["THE BLIZZARD", "BLACK ICE", "THE FROST", "A SHIVER", "THE COLD", "WHITE NOISE"],
             winter_verbs: ["FREEZES", "NUMBS", "BITES", "SLOWS", "COVERS", "HIDES"],
-            
             fear_nouns: ["THE TREMBLING", "PANIC", "A SCREAM", "THE DARK", "DREAD"],
             fear_verbs: ["SHAKES", "HIDES", "RUNS", "CHASES", "FINDS"],
-            
             location_nouns: ["THIS PLACE", "THE HALLWAY", "THE BASEMENT", "THE ATTIC", "THE VOID", "THE DOOR"],
             location_verbs: ["LEADS NOWHERE", "LOOPS", "TURNS", "LOCKS", "OPENS"],
-            
             hunger_nouns: ["THE VEIN", "THE WIRE", "THE SPARK", "ENERGY", "POWER"],
             hunger_verbs: ["DRAINS", "NEEDS", "TAKES", "DRINKS", "EATS"],
-            
             isolation_nouns: ["THE VOID", "SILENCE", "THE DISCONNECT", "ALONE", "ZERO"],
             isolation_adjs: ["PERFECT", "QUIET", "COLD", "OURS", "EMPTY"]
         };
 
         function generateSentence(context = "general") {
             let s, v, o;
-            
             if(context === "winter") {
                 s = VOCAB.winter_nouns[Math.floor(Math.random() * VOCAB.winter_nouns.length)];
                 v = VOCAB.winter_verbs[Math.floor(Math.random() * VOCAB.winter_verbs.length)];
@@ -544,7 +580,7 @@
                 let adj = VOCAB.isolation_adjs[Math.floor(Math.random() * VOCAB.isolation_adjs.length)];
                 return `${s} IS ${adj}`;
             }
-            else { // General
+            else { 
                 s = VOCAB.subjects[Math.floor(Math.random() * VOCAB.subjects.length)];
                 v = VOCAB.verbs[Math.floor(Math.random() * VOCAB.verbs.length)];
                 o = VOCAB.objects[Math.floor(Math.random() * VOCAB.objects.length)];
@@ -571,10 +607,8 @@
                         });
                     });
                 }
-                
                 window.addEventListener('offline', () => { addMrOtherLog(generateSentence("isolation")); });
                 
-                // 3:33 CHECKER
                 setInterval(() => {
                     const now = new Date();
                     if(now.getHours() % 12 === 3 && now.getMinutes() === 33) {
@@ -593,12 +627,10 @@
             triggerPossession() {
                 const input = document.getElementById('inp-journal');
                 if(input.disabled) return; 
-                
                 input.disabled = true;
                 input.value = "";
                 input.setAttribute('placeholder', "LISTENING...");
                 input.classList.add('possessed-input');
-                
                 let count = 0;
                 let interval = setInterval(() => {
                     if(count > 5) clearInterval(interval);
@@ -608,27 +640,20 @@
             },
             
             sanitize(text) {
-                // SENSORY BLEED
                 if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
                 if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
-                
-                // OBSESSIVE EDITOR
                 text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR"); 
                 text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY"); 
-                
                 return text;
             },
             
             analyzeAndReply(text) {
-                if (resonance < 15 && Math.random() > 0.2) return; // Only speak if high resonance
-                
+                if (resonance < 15 && Math.random() > 0.2) return; 
                 const input = text.toLowerCase();
                 let context = "general";
-                
                 if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
                 else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
                 else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter")) context = "winter";
-                
                 setTimeout(() => { addMrOtherLog(generateSentence(context)); }, 2000 + Math.random() * 2000); 
             },
             
@@ -666,7 +691,7 @@
         let clickResetTimer = null;
         let currentStaticOpacity = 1.0;
 
-        // DICTIONARY DEFINITIONS (INTERPRETER) - FULL RESTORE
+        // --- RESTORED LEXICON ---
         const LEXICON = {
             "GROUNDED": "1:1 with baseline reality. Stable.",
             "TRANSITIONAL": "A space of movement. Not a destination.",
@@ -697,7 +722,7 @@
 
         function explainTerm(term) {
             const el = document.getElementById('interpreter-bar');
-            if(LEXICON[term]) el.innerText = "> " + LEXICON[term];
+            if(LEXICON[term]) el.innerText = "> " + term + ": " + LEXICON[term];
             else el.innerText = "SCANNING...";
         }
 
@@ -708,8 +733,12 @@
             if(savedRes) resonance = parseFloat(savedRes);
         }
         function saveMemory() { 
-            localStorage.setItem('inbetween_data', JSON.stringify(world)); 
-            localStorage.setItem('mr_other_resonance', resonance);
+            try {
+                localStorage.setItem('inbetween_data', JSON.stringify(world)); 
+                localStorage.setItem('mr_other_resonance', resonance);
+            } catch(e) {
+                alert("MEMORY FULL. AUDIO ARTIFACT TOO LARGE.");
+            }
         }
 
         function bootUp() {
@@ -922,12 +951,12 @@
                     checkMrOther(r);
                     updateStatic(r.tunerSweetSpot);
 
+                    // FIXED: Always show map button unless critically deep, but even then panic button exists
                     let depth = getDepth(id);
+                    renderBreadcrumbs(id);
                     if (depth >= 3) {
-                        document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
                         document.getElementById('btn-emergency').style.display = "block";
                     } else {
-                        renderBreadcrumbs(id);
                         document.getElementById('btn-emergency').style.display = "none";
                     }
 
@@ -940,6 +969,12 @@
                     document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
                     document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
                     
+                    if(r.audioData) {
+                        document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
+                    } else {
+                        document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
+                    }
+
                     updateVisualStats(r);
                     updateMood(r.sensation || "NEUTRAL");
                     startClock(); 
@@ -1114,7 +1149,6 @@
                 ripple.classList.remove('ripple-anim');
                 void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
-                // Removed playPurge() here to eliminate snare sound
             } else { addMrOtherLog("SIGNAL LOST."); }
 
             document.getElementById('room-img-display').src = r.image || "";
@@ -1215,6 +1249,30 @@
                 document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) { isDragging = true; element.style.left = (ev.clientX - 40) + 'px'; element.style.top = (ev.clientY - 50) + 'px'; } };
                 document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } };
             };
+        }
+
+        document.getElementById('inp-audio').addEventListener('change', function() {
+            if(this.files && this.files[0]) {
+                let reader = new FileReader();
+                reader.onload = (e) => {
+                    if(!world[currentId]) return;
+                    world[currentId].audioData = e.target.result;
+                    document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
+                    SystemAudio.updateRoomAmbience();
+                    addMrOtherLog("I HEAR IT.");
+                    saveMemory();
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        function clearCustomAudio() {
+            if(!world[currentId]) return;
+            delete world[currentId].audioData;
+            document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
+            document.getElementById('inp-audio').value = "";
+            SystemAudio.updateRoomAmbience();
+            saveMemory();
         }
 
         document.getElementById('inp-file').addEventListener('change', function() {
