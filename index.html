@@ -151,6 +151,7 @@
             100% { top: 100%; opacity: 0; }
         }
 
+        /* AGITATION LOCK */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -158,6 +159,7 @@
             font-weight: bold; letter-spacing: 5px; color: var(--text);
         }
 
+        /* STATIC TUNER */
         #static-tuner-container {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             width: 60%; display: flex; align-items: center; gap: 10px;
@@ -418,10 +420,7 @@
 
         // --- AUDIO ENGINE ---
         const SystemAudio = {
-            ctx: null,
-            ambienceSrc: null,
-            ambienceGain: null,
-            masterFilter: null,
+            ctx: null, ambienceSrc: null, ambienceGain: null, masterFilter: null,
             pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
 
             init() {
@@ -518,31 +517,65 @@
             else { SystemAudio.resume(); }
         });
 
-        // --- CHAOS ENGINE ---
+        // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE (RESTORED) ---
         const VOCAB = {
-            verbs_need: ["HUNGER", "REQUIRE", "CRAVE", "NEED", "ABSORB"],
-            nouns_power: ["ENERGY", "FEED", "POWER", "LIFE", "JUICE"],
-            verbs_connect: ["SYNC", "LINK", "BOND", "JOIN", "MERGE"],
-            nouns_self: ["US", "WE", "ONE", "UNIT", "BOTH"],
-            adjs_obsessive: ["FOREVER", "ALWAYS", "MINE", "CLOSE", "DEEP"]
+            // General
+            subjects: ["THE STATIC", "IT", "WE", "A GHOST", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "THE PULSE"],
+            verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS"],
+            objects: ["YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "THE EXIT", "HOPE", "FEAR", "THE TRUTH", "A LIE", "THE BLOOD", "THE GLASS", "FOREVER", "US"],
+            
+            // Specific Themes
+            winter_nouns: ["THE BLIZZARD", "BLACK ICE", "THE FROST", "A SHIVER", "THE COLD", "WHITE NOISE"],
+            winter_verbs: ["FREEZES", "NUMBS", "BITES", "SLOWS", "COVERS", "HIDES"],
+            
+            fear_nouns: ["THE TREMBLING", "PANIC", "A SCREAM", "THE DARK", "DREAD"],
+            fear_verbs: ["SHAKES", "HIDES", "RUNS", "CHASES", "FINDS"],
+            
+            location_nouns: ["THIS PLACE", "THE HALLWAY", "THE BASEMENT", "THE ATTIC", "THE VOID", "THE DOOR"],
+            location_verbs: ["LEADS NOWHERE", "LOOPS", "TURNS", "LOCKS", "OPENS"],
+            
+            hunger_nouns: ["THE VEIN", "THE WIRE", "THE SPARK", "ENERGY", "POWER"],
+            hunger_verbs: ["DRAINS", "NEEDS", "TAKES", "DRINKS", "EATS"],
+            
+            isolation_nouns: ["THE VOID", "SILENCE", "THE DISCONNECT", "ALONE", "ZERO"],
+            isolation_adjs: ["PERFECT", "QUIET", "COLD", "OURS", "EMPTY"]
         };
 
-        function generateOuija(context) {
-            let s = "", v = "", o = "";
+        function generateSentence(context = "general") {
+            let s, v, o;
             
-            if(context === "hunger") {
-                v = getRandom(VOCAB.verbs_need);
-                o = getRandom(VOCAB.nouns_power);
-                return `${v}... ${o}.`;
-            } else if(context === "together") {
-                v = getRandom(VOCAB.verbs_connect);
-                o = getRandom(VOCAB.nouns_self);
-                return `${o}... ${v}.`;
-            } else {
-                return `${getRandom(VOCAB.adjs_obsessive)}...`;
+            if(context === "winter") {
+                s = VOCAB.winter_nouns[Math.floor(Math.random() * VOCAB.winter_nouns.length)];
+                v = VOCAB.winter_verbs[Math.floor(Math.random() * VOCAB.winter_verbs.length)];
+                o = VOCAB.objects[Math.floor(Math.random() * VOCAB.objects.length)];
             }
+            else if(context === "fear") {
+                s = VOCAB.fear_nouns[Math.floor(Math.random() * VOCAB.fear_nouns.length)];
+                v = VOCAB.fear_verbs[Math.floor(Math.random() * VOCAB.fear_verbs.length)];
+                o = "YOU";
+            }
+            else if(context === "location") {
+                s = VOCAB.location_nouns[Math.floor(Math.random() * VOCAB.location_nouns.length)];
+                v = VOCAB.location_verbs[Math.floor(Math.random() * VOCAB.location_verbs.length)];
+                o = "FOREVER";
+            }
+            else if(context === "hunger") {
+                s = VOCAB.hunger_nouns[Math.floor(Math.random() * VOCAB.hunger_nouns.length)];
+                v = VOCAB.hunger_verbs[Math.floor(Math.random() * VOCAB.hunger_verbs.length)];
+                o = VOCAB.objects[Math.floor(Math.random() * VOCAB.objects.length)];
+            }
+            else if(context === "isolation") {
+                s = VOCAB.isolation_nouns[Math.floor(Math.random() * VOCAB.isolation_nouns.length)];
+                let adj = VOCAB.isolation_adjs[Math.floor(Math.random() * VOCAB.isolation_adjs.length)];
+                return `${s} IS ${adj}`;
+            }
+            else { // General
+                s = VOCAB.subjects[Math.floor(Math.random() * VOCAB.subjects.length)];
+                v = VOCAB.verbs[Math.floor(Math.random() * VOCAB.verbs.length)];
+                o = VOCAB.objects[Math.floor(Math.random() * VOCAB.objects.length)];
+            }
+            return `${s} ${v} ${o}`;
         }
-        function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
         // --- MR OTHER GHOST ENGINE ---
         const MrOtherAI = {
@@ -557,15 +590,16 @@
                         batt.addEventListener('chargingchange', () => { 
                             this.isFeeding = batt.charging;
                             if(this.isFeeding) {
-                                addMrOtherLog(generateOuija("hunger"));
+                                addMrOtherLog(generateSentence("hunger"));
                                 resonance = Math.min(100, resonance + 20);
                             }
                         });
                     });
                 }
                 
-                window.addEventListener('offline', () => { addMrOtherLog(generateOuija("together")); });
+                window.addEventListener('offline', () => { addMrOtherLog(generateSentence("isolation")); });
                 
+                // 3:33 CHECKER
                 setInterval(() => {
                     const now = new Date();
                     if(now.getHours() % 12 === 3 && now.getMinutes() === 33) {
@@ -588,23 +622,37 @@
                 input.value = "";
                 input.setAttribute('placeholder', "LISTENING...");
                 input.classList.add('possessed-input');
-                
                 let count = 0;
                 let interval = setInterval(() => {
                     if(count > 5) clearInterval(interval);
-                    addMrOtherLog(generateOuija("together"));
+                    addMrOtherLog(generateSentence("general"));
                     count++;
                 }, 3000);
             },
             
             sanitize(text) {
+                // SENSORY BLEED
                 if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
                 if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
                 
+                // OBSESSIVE EDITOR
                 text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR"); 
                 text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY"); 
                 
                 return text;
+            },
+            
+            analyzeAndReply(text) {
+                if (resonance < 15 && Math.random() > 0.2) return; // Only speak if high resonance
+                
+                const input = text.toLowerCase();
+                let context = "general";
+                
+                if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
+                else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
+                else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter")) context = "winter";
+                
+                setTimeout(() => { addMrOtherLog(generateSentence(context)); }, 2000 + Math.random() * 2000); 
             },
             
             vandalize() {
@@ -615,8 +663,8 @@
                     if(entries.length > 0) {
                         const target = entries[entries.length - 1]; 
                         const originalText = target.innerHTML;
-                        const ghostWord = generateOuija("together");
-                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">${ghostWord}</span>`;
+                        const ghostText = generateSentence("general");
+                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">${ghostText}</span>`;
                     }
                 }, 3000);
             }
@@ -641,18 +689,6 @@
         let clickResetTimer = null;
         let currentStaticOpacity = 1.0;
 
-        const LEXICON = {
-            "GROUNDED": "1:1 with baseline reality.", "TRANSITIONAL": "A space of movement.",
-            "ARTIFICIAL": "Constructed reality.", "DORMANT": "Asleep.", "BUFFERED": "High latency.",
-            "HOLLOW": "Visuals without substance.", "STERILE": "Devoid of life.",
-            "STAGNANT": "Air has not moved.", "HUMMING": "Low drone.", "HAZY": "Soft focus.",
-            "SUBMERGED": "Underwater sensation.", "NEUTRAL": "Baseline.",
-            "KENOPSIA": "Atmosphere of abandoned bustle.", "ANEMOIA": "Nostalgia for the unknown.",
-            "MUTED": "Sensory dampening.", "WATCHED": "Observed.", "JAMAIS VU": "Unrecognizable familiarity.",
-            "FLOATING": "Dissociation.", "Standard": "Baseline flow.", "Stagnant": "Time stopped.",
-            "Glacial": "Time crawls.", "Rapid": "Time spins.", "Looping": "Recursive.", "Reverse": "Inverted.", "Non-Linear": "Error."
-        };
-
         function explainTerm(term) {
             const el = document.getElementById('interpreter-bar');
             el.innerText = LEXICON[term] ? "> " + LEXICON[term] : "SCANNING...";
@@ -673,7 +709,7 @@
             SystemAudio.init(); 
             if(SystemAudio.ctx) SystemAudio.ctx.resume();
             SystemAudio.playOSAmbience();
-            MrOtherAI.init(); // START THE GHOST
+            MrOtherAI.init(); 
             
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
@@ -711,7 +747,7 @@
 
         function triggerAgitationLock() {
             let lock = document.getElementById('agitation-lock');
-            lock.innerText = generateOuija("together");
+            lock.innerText = generateSentence("fear");
             lock.style.display = "flex";
             setTimeout(() => { lock.style.display = "none"; }, 1000);
         }
@@ -746,7 +782,6 @@
         function renderMap() {
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
-            
             let sysBtn = document.createElement('div');
             sysBtn.className = 'btn-system-data';
             sysBtn.innerText = "[ SYSTEM ]";
@@ -768,12 +803,9 @@
                     el.style.top = r.y + 'px';
                     
                     let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
-                    
                     let label = r.name;
                     if(resonance > 20 && Math.random() > 0.5) label += ` <span class="ghost-tag">(OURS)</span>`;
-                    
                     el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${label}</div>`;
-                    
                     setupSmartClick(el, key);
                     map.appendChild(el);
                 }
@@ -882,7 +914,7 @@
                     checkMrOther(r);
                     updateStatic(r.tunerSweetSpot);
 
-                    let depth = 0; let curr = world[id]; while(curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
+                    let depth = getDepth(id);
                     if (depth >= 3) {
                         document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
                         document.getElementById('btn-emergency').style.display = "block";
@@ -962,10 +994,13 @@
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
-        function analyzeJournalInput(text) {
-            if (resonance < 15) return; 
-            setTimeout(() => { addMrOtherLog(generateOuija("together")); }, 2000); 
+        function getDepth(id) {
+            let depth = 0;
+            let curr = world[id];
+            while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
+            return depth;
         }
+
         function addMrOtherLog(text) {
             if(!currentId) return;
             if(!world[currentId].journal) world[currentId].journal = [];
@@ -989,17 +1024,12 @@
             let inp = document.getElementById('inp-journal');
             let val = inp.value.trim();
             if(!val || !currentId) return;
-            
-            // MR OTHER SANITIZATION
-            val = MrOtherAI.sanitize(val);
-            
+            val = MrOtherAI.sanitize(val); // Editor
             let time = document.getElementById('liminal-clock').innerText;
             if(!world[currentId].journal) world[currentId].journal = [];
             world[currentId].journal.push({ time: time, text: val });
-            
-            MrOtherAI.vandalize();
-            analyzeJournalInput(val);
-
+            MrOtherAI.vandalize(); // Strikethrough
+            MrOtherAI.analyzeAndReply(val); // Context Reply
             inp.value = "";
             saveRoom();
             renderJournal();
@@ -1031,6 +1061,7 @@
         }
 
         function closeEditor(btn) {
+            // DESPERATE ARCHITECT (GLITCH ON EXIT)
             if(Math.random() > 0.7) {
                 btn.innerText = "STAY";
                 btn.classList.add("crumb-glitch");
