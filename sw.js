@@ -1,5 +1,5 @@
-// VERSION v7 - Added Rapid and Glacial
-const CACHE_NAME = 'inbetween-v7';
+// VERSION v8 - Mr Other Update
+const CACHE_NAME = 'inbetween-v8';
 const ASSETS = [
   './',
   './index.html',
