@@ -1,5 +1,5 @@
-// VERSION v13 - Lexicon & Dictionary Fix
-const CACHE_NAME = 'inbetween-v13';
+// VERSION v14 - Tuner Mechanic Update
+const CACHE_NAME = 'inbetween-v14';
 const ASSETS = [
   './',
   './index.html',
