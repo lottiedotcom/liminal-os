@@ -107,6 +107,7 @@
         .crumb { color: var(--accent); cursor: pointer; text-transform: uppercase; }
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
+        .crumb-lost { color: var(--danger); font-family: var(--mono); letter-spacing: 2px; }
 
         /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
@@ -119,7 +120,7 @@
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 1; /* Default to full static until tuned */
+            opacity: 1; 
             pointer-events: none; 
             mix-blend-mode: screen; 
             transition: opacity 0.1s;
@@ -132,13 +133,6 @@
             background: #000; z-index: 99999; opacity: 0; pointer-events: none;
             transition: opacity 0.2s;
         }
-        
-        /* DECAY EFFECTS (Now controlled by JS opacity) */
-        .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
-        .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
-        
-        /* MR OTHER EFFECTS */
-        .bowing-effect { transform: scale(1.05); }
 
         /* SCAN RIPPLE EFFECT */
         .scan-ripple {
@@ -153,8 +147,12 @@
             90% { opacity: 1; }
             100% { top: 100%; opacity: 0; }
         }
+        
+        .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
+        .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
+        .bowing-effect { transform: scale(1.05); }
 
-        /* AGITATION LOCK (Panic Screen) */
+        /* AGITATION LOCK */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -209,7 +207,6 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
-        /* GHOST BOX / INTERPRETER (IMPROVED VISIBILITY) */
         #interpreter-bar {
             font-family: var(--mono); font-size: 11px; color: var(--accent);
             text-transform: uppercase; margin-top: 8px; min-height: 14px;
@@ -255,6 +252,7 @@
         .btn-row { display: flex; gap: 10px; margin-top: 10px; margin-bottom: 30px;}
         .btn-primary { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
         .btn-connect { flex: 1; background: #2d3748; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
+        .btn-emergency { width: 100%; background: var(--danger); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 2px; margin-top: 10px; display: none; }
 
         .hotspot {
             position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
@@ -400,6 +398,8 @@
                 <button class="btn-primary" id="btn-save" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
+            
+            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()">EMERGENCY FLUSH</button>
         </div>
     </div>
 
@@ -417,7 +417,7 @@
             });
         }
 
-        // --- AUDIO ENGINE (Deep & Clean, No High Pitch, No Click Noise) ---
+        // --- AUDIO ENGINE (ATMOSPHERE ONLY - NO CLICKS) ---
         const SystemAudio = {
             ctx: null,
             ambienceSrc: null,
@@ -557,13 +557,10 @@
             }
         };
 
-        // HANDLE APP VISIBILITY
+        // VISIBILITY API
         document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                SystemAudio.suspend();
-            } else {
-                SystemAudio.resume();
-            }
+            if (document.hidden) { SystemAudio.suspend(); } 
+            else { SystemAudio.resume(); }
         });
 
         // APP LOGIC
@@ -831,46 +828,73 @@
             }
         }
 
+        function getDepth(id) {
+            let depth = 0;
+            let curr = world[id];
+            while (curr && curr.parentId) {
+                depth++;
+                curr = world[curr.parentId];
+            }
+            return depth;
+        }
+
+        function emergencyFlush() {
+            SystemAudio.stopAll();
+            const ts = document.getElementById('transition-screen');
+            ts.style.opacity = "1";
+            
+            setTimeout(() => {
+                enterRoom('origin');
+                document.getElementById('map-view').classList.remove('hidden');
+                document.getElementById('room-editor-view').classList.add('hidden');
+                renderMap();
+                SystemAudio.playOSAmbience();
+            }, 1000);
+        }
+
         function enterRoom(id) {
-            // STOP OS AUDIO IMMEDIATELY
             SystemAudio.stopAll();
             
-            // SHOW BLACK SCREEN TRANSITION
+            // BLACK SCREEN TRANSITION
             const ts = document.getElementById('transition-screen');
             ts.style.opacity = "1";
             ts.style.pointerEvents = "auto";
 
-            // WAIT 1.2 SECONDS
             setTimeout(() => {
                 currentId = id;
                 let r = world[id];
                 
                 if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
-                // START ROOM AUDIO
+                // RESET DECAY ON ENTRY
+                r.lastVisited = Date.now();
+                
+                // AUDIO SWITCH
                 SystemAudio.updateRoomAmbience();
 
-                // Set Tuner to 0 or random distant value to FORCE tuning
-                let randomStart = Math.random() > 0.5 ? 0 : 100;
-                document.getElementById('static-tuner').value = randomStart;
+                // Set Tuner to SWEET SPOT (Clear)
+                document.getElementById('static-tuner').value = r.tunerSweetSpot;
                 
                 updateResonance(r);
                 checkMrOther(r);
-                
-                // Calculate DECAY (Time passed)
-                let decay = calculateDecay(r);
-                
-                // INITIAL VISUAL SETUP
-                updateStatic(randomStart);
+                updateStatic(r.tunerSweetSpot);
+
+                // DEPTH LOGIC
+                let depth = getDepth(id);
+                if (depth >= 3) {
+                    document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
+                    document.getElementById('btn-emergency').style.display = "block";
+                } else {
+                    renderBreadcrumbs(id);
+                    document.getElementById('btn-emergency').style.display = "none";
+                }
 
                 document.getElementById('map-view').classList.add('hidden');
                 document.getElementById('room-editor-view').classList.remove('hidden');
                 
-                // FADE OUT BLACK SCREEN
                 ts.style.opacity = "0";
                 ts.style.pointerEvents = "none";
 
-                renderBreadcrumbs(id);
                 document.getElementById('inp-name').value = r.name;
                 document.getElementById('inp-time').value = r.time || "Standard";
                 document.getElementById('inp-reality').value = r.reality || "GROUNDED";
@@ -912,18 +936,21 @@
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
             
+            let decayFloor = calculateDecay(r) / 100;
             let distance = Math.abs(val - sweetSpot);
+            
             let opacity = 0;
             if(distance < 5) opacity = 0;
             else opacity = Math.min(1, (distance - 5) / 40);
 
-            currentStaticOpacity = opacity;
+            let finalOpacity = Math.max(opacity, decayFloor);
+            currentStaticOpacity = finalOpacity; 
 
             const overlay = document.getElementById('static-overlay');
-            overlay.style.opacity = opacity;
+            overlay.style.opacity = finalOpacity;
 
             const img = document.getElementById('room-img-display');
-            if(opacity > 0.2) {
+            if(finalOpacity > 0.2) {
                  if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
                  else img.className = 'decay-dark';
             } else {
@@ -931,7 +958,7 @@
             }
             
             const btn = document.getElementById('btn-save');
-            if(opacity === 0) {
+            if(finalOpacity < 0.1) {
                 btn.style.background = "var(--accent)";
                 btn.innerText = "STABILIZE REALITY";
             } else {
@@ -987,6 +1014,8 @@
                 "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED",
                 "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
+            
+            // CONTEXT TRIGGERS
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
@@ -1163,7 +1192,7 @@
                 // RIPPLE EFFECT & PURGE SOUND
                 let ripple = document.getElementById('scan-ripple');
                 ripple.classList.remove('ripple-anim');
-                void ripple.offsetWidth; 
+                void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
                 SystemAudio.playPurge();
             } else {
