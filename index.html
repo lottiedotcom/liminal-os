@@ -254,10 +254,24 @@
 
     <div id="data-modal" class="hidden">
         <h3 style="letter-spacing: 2px; color: #718096;">SYSTEM DATA</h3>
-        <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
-        <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
-        <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
-        <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
+        
+        <div id="data-menu-buttons" style="display:flex; flex-direction:column; gap:15px;">
+            <button class="data-btn" onclick="showLexicon()">VIEW LEXICON (DICTIONARY)</button>
+            <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
+            <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
+            <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
+            <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
+        </div>
+
+        <div id="lexicon-view" class="hidden" style="width: 80%; max-height: 60vh; overflow-y: auto; text-align: left; background: #fff; border: 1px solid var(--border); padding: 10px;">
+            <div style="position:sticky; top:0; background:#fff; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; font-size:12px; color:var(--text);">KNOWN TERMS</span>
+                <button onclick="hideLexicon()" style="background:none; border:none; color:var(--danger); font-weight:bold; cursor:pointer;">X</button>
+            </div>
+            <div id="lexicon-content" style="font-family: var(--mono); font-size: 10px; color: #4a5568; display:flex; flex-direction:column; gap:8px;">
+                </div>
+        </div>
+
         <input type="file" id="import-file" style="display:none;" onchange="importData(this)">
     </div>
 
@@ -580,6 +594,28 @@
             let modal = document.getElementById('data-modal');
             if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
             else modal.classList.add('hidden');
+            
+            // Ensure menu is reset when opening
+            document.getElementById('data-menu-buttons').classList.remove('hidden');
+            document.getElementById('lexicon-view').classList.add('hidden');
+        }
+
+        function showLexicon() {
+            document.getElementById('data-menu-buttons').classList.add('hidden');
+            document.getElementById('lexicon-view').classList.remove('hidden');
+            
+            const container = document.getElementById('lexicon-content');
+            container.innerHTML = "";
+            for (let [term, def] of Object.entries(LEXICON)) {
+                let item = document.createElement('div');
+                item.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${term}</span><br>${def}`;
+                container.appendChild(item);
+            }
+        }
+
+        function hideLexicon() {
+            document.getElementById('lexicon-view').classList.add('hidden');
+            document.getElementById('data-menu-buttons').classList.remove('hidden');
         }
 
         function exportData() {
