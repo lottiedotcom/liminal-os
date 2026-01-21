@@ -1,5 +1,5 @@
-// VERSION v11 - Decay & Obsession Update
-const CACHE_NAME = 'inbetween-v11';
+// VERSION v12 - The Cursed Update
+const CACHE_NAME = 'inbetween-v12';
 const ASSETS = [
   './',
   './index.html',
