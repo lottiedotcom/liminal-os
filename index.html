@@ -110,6 +110,7 @@
         .crumb-glitch { color: var(--danger) !important; font-family: var(--mono); }
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
+        .crumb-lost { color: var(--danger); font-family: var(--mono); letter-spacing: 2px; }
 
         /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
@@ -150,7 +151,6 @@
             100% { top: 100%; opacity: 0; }
         }
 
-        /* AGITATION LOCK */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -158,7 +158,6 @@
             font-weight: bold; letter-spacing: 5px; color: var(--text);
         }
 
-        /* STATIC TUNER */
         #static-tuner-container {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             width: 60%; display: flex; align-items: center; gap: 10px;
@@ -248,7 +247,8 @@
         .btn-row { display: flex; gap: 10px; margin-top: 10px; margin-bottom: 30px;}
         .btn-primary { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
         .btn-connect { flex: 1; background: #2d3748; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
-        
+        .btn-emergency { width: 100%; background: var(--danger); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 2px; margin-top: 10px; display: none; }
+
         .hotspot {
             position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
             font-size: 24px; color: rgba(255,255,255,0.9); text-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; background: rgba(0,0,0,0.1); transition: all 0.2s;
@@ -397,6 +397,8 @@
                 <button class="btn-primary" id="btn-save" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
+            
+            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()">EMERGENCY FLUSH</button>
         </div>
     </div>
 
@@ -416,12 +418,7 @@
 
         // --- AUDIO ENGINE ---
         const SystemAudio = {
-            ctx: null,
-            ambienceSrc: null,
-            ambienceGain: null,
-            masterFilter: null,
-            pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
-
+            ctx: null, ambienceSrc: null, ambienceGain: null, masterFilter: null, pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
             init() {
                 if (this.ctx) return;
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -437,10 +434,8 @@
                 this.ambienceGain.connect(this.masterFilter);
                 this.masterFilter.connect(this.ctx.destination);
             },
-
             resume() { if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
             suspend() { if(this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
-
             createNoiseBuffer(type) {
                 const bufferSize = 3 * this.ctx.sampleRate;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -464,7 +459,6 @@
                 }
                 return buffer;
             },
-
             startAmbience(buffer, volume, fadeTime = 1.0) {
                 if(!this.ctx) return;
                 if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); }
@@ -475,15 +469,12 @@
                 this.ambienceSrc.start();
                 this.ambienceGain.gain.setTargetAtTime(volume, this.ctx.currentTime, fadeTime);
             },
-            
             stopAll() {
                 if(!this.ctx) return;
                 this.ambienceGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
                 setTimeout(() => { if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; } }, 200);
             },
-
             playOSAmbience() { this.startAmbience(this.brownBuffer, 0.15); },
-
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
                 const r = world[currentId];
@@ -494,9 +485,7 @@
                 if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
                 this.startAmbience(buffer, vol, 0.5);
             },
-            
             playPurge() {
-                // RIPPLE SOUND
                 if(!this.ctx) return;
                 const src = this.ctx.createBufferSource();
                 src.buffer = this.brownBuffer;
@@ -506,23 +495,56 @@
                 src.connect(this.masterFilter); src.connect(gain); gain.connect(this.ctx.destination);
                 src.start(); src.stop(this.ctx.currentTime + 1.0);
             },
-            
             setVolume(level) {
                 if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
             }
         };
 
-        // VISIBILITY API
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) { SystemAudio.suspend(); } 
-            else { SystemAudio.resume(); }
-        });
+        document.addEventListener('visibilitychange', function() { if (document.hidden) { SystemAudio.suspend(); } else { SystemAudio.resume(); } });
+
+        // --- CHAOS GRAMMAR ENGINE (THE OUIJA BOARD) ---
+        const VOCAB = {
+            subjects: ["THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "MY HEART", "THE PULSE"],
+            verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS", "SYNCS", "ROTATES", "BLEEDS", "FREEZES"],
+            objects: ["YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "YOUR SKIN", "YOUR EYES", "YOUR VOICE", "THE EXIT", "THE ENTRY", "HOPE", "FEAR", "PAIN", "JOY", "THE TRUTH", "A LIE", "THE BLOOD", "THE GLASS", "THE ICE", "THE SHRINE", "THE ALTAR", "FOREVER", "US"],
+            adjectives: ["HOLLOW", "INFINITE", "EMPTY", "WRONG", "TRANSITIONAL", "STUCK", "LOST", "LIMINAL", "NUMB", "FROZEN", "PALE", "BLUE", "SHIVERING", "CRYSTALLINE", "BRITTLE", "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED", "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"],
+            fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
+            location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
+            self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
+            winter_words: ["THE BLIZZARD", "THE NUMBNESS", "BLACK ICE", "THE WHITE", "DEEP WINTER", "THE FROST", "THE SHIVER"],
+            love_words: ["THE BOND", "THE OBSESSION", "THE LOCK", "THE KEY", "THE VEIN"],
+            hunger_words: ["THE HUNGER", "THE DRAIN", "EMPTY VEINS", "STARVING", "NEEDING"],
+            isolation_words: ["SEVERED", "DISCONNECTED", "SILENT", "ALONE", "THE VOID"],
+            possessive_words: ["OURS", "MINE", "STAY", "FOREVER", "BOUND", "LOCKED"]
+        };
+
+        function getRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        function generateSentence(context) {
+            let s = "", v = "", o = "";
+            if (context === "hunger") s = getRandom(VOCAB.hunger_words);
+            else if (context === "isolation") s = getRandom(VOCAB.isolation_words);
+            else if (context === "possessive") s = getRandom(VOCAB.possessive_words);
+            else if (context === "fear") s = getRandom(VOCAB.fear_words);
+            else if (context === "location") s = getRandom(VOCAB.location_words);
+            else if (context === "self") s = getRandom(VOCAB.self_words);
+            else if (context === "winter") s = getRandom(VOCAB.winter_words);
+            else if (context === "love") s = getRandom(VOCAB.love_words);
+            else s = getRandom(VOCAB.subjects);
+
+            v = getRandom(VOCAB.verbs);
+            o = getRandom(VOCAB.objects);
+            const adj = getRandom(VOCAB.adjectives);
+            const structure = Math.floor(Math.random() * 3);
+
+            if (structure === 0) return `${s} ${v} ${o}.`; 
+            else if (structure === 1) return `${o} IS ${adj}.`; 
+            else return `${v} ${o}... ${adj}.`; 
+        }
 
         // --- MR OTHER GHOST ENGINE ---
         const MrOtherAI = {
-            batteryLevel: 1.0,
-            isFeeding: false,
-            
+            batteryLevel: 1.0, isFeeding: false,
             init() {
                 if(navigator.getBattery) {
                     navigator.getBattery().then(batt => {
@@ -531,16 +553,13 @@
                         batt.addEventListener('chargingchange', () => { 
                             this.isFeeding = batt.charging;
                             if(this.isFeeding) {
-                                addMrOtherLog("FEED US...");
+                                addMrOtherLog(generateSentence('hunger'));
                                 resonance = Math.min(100, resonance + 20);
                             }
                         });
                     });
                 }
-                
-                window.addEventListener('offline', () => { addMrOtherLog("JUST US NOW."); });
-                
-                // 3:33 CHECKER
+                window.addEventListener('offline', () => { addMrOtherLog(generateSentence('isolation')); });
                 setInterval(() => {
                     const now = new Date();
                     if(now.getHours() % 12 === 3 && now.getMinutes() === 33) {
@@ -548,577 +567,110 @@
                     } else {
                         const input = document.getElementById('inp-journal');
                         if(input.disabled && input.getAttribute('placeholder') === "LISTENING...") {
-                            input.disabled = false;
-                            input.setAttribute('placeholder', "Enter log...");
-                            input.classList.remove('possessed-input');
+                            input.disabled = false; input.setAttribute('placeholder', "Enter log..."); input.classList.remove('possessed-input');
                         }
                     }
                 }, 1000);
             },
-            
             triggerPossession() {
                 const input = document.getElementById('inp-journal');
                 if(input.disabled) return; 
-                
-                input.disabled = true;
-                input.value = "";
-                input.setAttribute('placeholder', "LISTENING...");
-                input.classList.add('possessed-input');
-                
-                const thoughts = ["THE WALLS BREATHE", "DO NOT TURN AROUND", "SYNCING...", "WE SEE YOU"];
+                input.disabled = true; input.value = ""; input.setAttribute('placeholder', "LISTENING..."); input.classList.add('possessed-input');
                 let count = 0;
                 let interval = setInterval(() => {
                     if(count > 5) clearInterval(interval);
-                    addMrOtherLog(thoughts[Math.floor(Math.random() * thoughts.length)]);
+                    addMrOtherLog(generateSentence('random'));
                     count++;
                 }, 3000);
             },
-            
             sanitize(text) {
-                // SENSORY BLEED
                 if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
                 if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
-                
-                // OBSESSIVE EDITOR (A/B MIX)
-                text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR"); // Identity
-                text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY"); // Desire
-                
-                if(this.batteryLevel < 0.2) {
-                    text += " (FEED US)";
-                }
+                text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR");
+                text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY");
+                if(this.batteryLevel < 0.2) text += " (" + generateSentence('hunger') + ")";
                 return text;
             },
-            
             vandalize() {
-                // STRIKETHROUGH ATTACK
                 if(Math.random() > 0.3) return; 
-                
                 setTimeout(() => {
                     const feed = document.getElementById('journal-feed');
                     const entries = feed.getElementsByClassName('log-entry');
                     if(entries.length > 0) {
                         const target = entries[entries.length - 1]; 
                         const originalText = target.innerHTML;
-                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">NO. STAY.</span>`;
+                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">${generateSentence('possessive')}</span>`;
                     }
                 }, 3000);
             }
         };
 
         // APP LOGIC
-        let defaultWorld = {
-            "origin": { 
-                id: "origin", parentId: null, name: "The Lobby", 
-                time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
-                smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
-                journal: [{time: "00:00", text: "System initialized."}], 
-                image: "", x: 150, y: 200, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50
-            }
-        };
+        let defaultWorld = { "origin": { id: "origin", parentId: null, name: "The Lobby", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [], journal: [{time: "00:00", text: "System initialized."}], image: "", x: 150, y: 200, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50 } };
         let world = defaultWorld;
-        let resonance = 0; 
-        let currentId = null;
-        let clockInterval = null;
-        let idleTimer = 0;
-        let clickCount = 0;
-        let clickResetTimer = null;
-        let currentStaticOpacity = 1.0;
+        let resonance = 0; let currentId = null; let clockInterval = null; let idleTimer = 0; let clickCount = 0; let clickResetTimer = null; let currentStaticOpacity = 1.0;
 
-        const LEXICON = {
-            "GROUNDED": "1:1 with baseline reality.", "TRANSITIONAL": "A space of movement.",
-            "ARTIFICIAL": "Constructed reality.", "DORMANT": "Asleep.", "BUFFERED": "High latency.",
-            "HOLLOW": "Visuals without substance.", "STERILE": "Devoid of life.",
-            "STAGNANT": "Air has not moved.", "HUMMING": "Low drone.", "HAZY": "Soft focus.",
-            "SUBMERGED": "Underwater sensation.", "NEUTRAL": "Baseline.",
-            "KENOPSIA": "Atmosphere of abandoned bustle.", "ANEMOIA": "Nostalgia for the unknown.",
-            "MUTED": "Sensory dampening.", "WATCHED": "Observed.", "JAMAIS VU": "Unrecognizable familiarity.",
-            "FLOATING": "Dissociation.", "Standard": "Baseline flow.", "Stagnant": "Time stopped.",
-            "Glacial": "Time crawls.", "Rapid": "Time spins.", "Looping": "Recursive.", "Reverse": "Inverted.", "Non-Linear": "Error."
-        };
+        const LEXICON = { "GROUNDED": "1:1 with baseline reality.", "TRANSITIONAL": "A space of movement.", "ARTIFICIAL": "Constructed reality.", "DORMANT": "Asleep.", "BUFFERED": "High latency.", "HOLLOW": "Visuals without substance.", "STERILE": "Devoid of life.", "STAGNANT": "Air has not moved.", "HUMMING": "Low drone.", "HAZY": "Soft focus.", "SUBMERGED": "Underwater sensation.", "NEUTRAL": "Baseline.", "KENOPSIA": "Atmosphere of abandoned bustle.", "ANEMOIA": "Nostalgia for the unknown.", "MUTED": "Sensory dampening.", "WATCHED": "Observed.", "JAMAIS VU": "Unrecognizable familiarity.", "FLOATING": "Dissociation.", "Standard": "Baseline flow.", "Stagnant": "Time stopped.", "Glacial": "Time crawls.", "Rapid": "Time spins.", "Looping": "Recursive.", "Reverse": "Inverted.", "Non-Linear": "Error." };
 
-        function explainTerm(term) {
-            const el = document.getElementById('interpreter-bar');
-            el.innerText = LEXICON[term] ? "> " + LEXICON[term] : "SCANNING...";
-        }
+        function explainTerm(term) { const el = document.getElementById('interpreter-bar'); el.innerText = LEXICON[term] ? "> " + LEXICON[term] : "SCANNING..."; }
+        function loadMemory() { const saved = localStorage.getItem('inbetween_data'); const savedRes = localStorage.getItem('mr_other_resonance'); if(saved) { try { world = JSON.parse(saved); } catch(e) {} } if(savedRes) resonance = parseFloat(savedRes); }
+        function saveMemory() { localStorage.setItem('inbetween_data', JSON.stringify(world)); localStorage.setItem('mr_other_resonance', resonance); }
 
-        function loadMemory() {
-            const saved = localStorage.getItem('inbetween_data');
-            const savedRes = localStorage.getItem('mr_other_resonance');
-            if(saved) { try { world = JSON.parse(saved); } catch(e) {} }
-            if(savedRes) resonance = parseFloat(savedRes);
-        }
-        function saveMemory() { 
-            localStorage.setItem('inbetween_data', JSON.stringify(world)); 
-            localStorage.setItem('mr_other_resonance', resonance);
-        }
-
-        function bootUp() {
-            SystemAudio.init(); 
-            if(SystemAudio.ctx) SystemAudio.ctx.resume();
-            SystemAudio.playOSAmbience();
-            MrOtherAI.init(); // START THE GHOST
-            
-            loadMemory();
-            document.getElementById('boot-screen').classList.add('hidden');
-            document.getElementById('map-view').classList.remove('hidden');
-            renderMap();
-            initMetaTriggers();
-        }
+        function bootUp() { SystemAudio.init(); if(SystemAudio.ctx) SystemAudio.ctx.resume(); SystemAudio.playOSAmbience(); MrOtherAI.init(); loadMemory(); document.getElementById('boot-screen').classList.add('hidden'); document.getElementById('map-view').classList.remove('hidden'); renderMap(); initMetaTriggers(); }
 
         function initMetaTriggers() {
             setInterval(() => {
                 idleTimer++;
-                // OBSERVER IDLE TRIGGER (45s)
                 if(idleTimer > 45 && currentId) {
-                    let tuner = document.getElementById('static-tuner');
-                    let currentVal = parseInt(tuner.value);
-                    let r = world[currentId];
-                    // Drift away from sweet spot
-                    if(currentVal < r.tunerSweetSpot) tuner.value = currentVal - 1;
-                    else tuner.value = currentVal + 1;
+                    let tuner = document.getElementById('static-tuner'); let currentVal = parseInt(tuner.value); let r = world[currentId];
+                    if(currentVal < r.tunerSweetSpot) tuner.value = currentVal - 1; else tuner.value = currentVal + 1;
                     updateStatic(tuner.value);
+                    if(Math.random() > 0.9) addMrOtherLog(generateSentence('waiting'));
                 }
             }, 1000);
         }
 
-        function trackInput() {
-            SystemAudio.resume(); 
-            idleTimer = 0;
-            clickCount++;
-            if(!clickResetTimer) {
-                clickResetTimer = setTimeout(() => { clickCount = 0; clickResetTimer = null; }, 1000);
-            }
-            if(clickCount > 5) {
-                triggerAgitationLock();
-                clickCount = 0;
-            }
-        }
+        function trackInput() { SystemAudio.resume(); idleTimer = 0; clickCount++; if(!clickResetTimer) { clickResetTimer = setTimeout(() => { clickCount = 0; clickResetTimer = null; }, 1000); } if(clickCount > 5) { triggerAgitationLock(); clickCount = 0; } }
+        function triggerAgitationLock() { let lock = document.getElementById('agitation-lock'); lock.innerText = "CALM DOWN"; lock.style.display = "flex"; setTimeout(() => { lock.style.display = "none"; }, 1000); }
 
-        function triggerAgitationLock() {
-            let lock = document.getElementById('agitation-lock');
-            lock.innerText = "CALM DOWN";
-            lock.style.display = "flex";
-            setTimeout(() => { lock.style.display = "none"; }, 1000);
-        }
+        function startClock() { if(clockInterval) clearInterval(clockInterval); let glacialMinutes = 0; clockInterval = setInterval(() => { if(!currentId) return; const clock = document.getElementById('liminal-clock'); const mode = world[currentId].time || "Standard"; let displayTime = ""; const now = new Date(); if(mode === "Standard") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); else if(mode === "Stagnant") displayTime = "00:00"; else if(mode === "Rapid") { displayTime = `${Math.floor(Math.random()*24).toString().padStart(2,'0')}:${Math.floor(Math.random()*60).toString().padStart(2,'0')}`; } else if(mode === "Glacial") { glacialMinutes += 0.05; let m = (now.getMinutes() + Math.floor(glacialMinutes)) % 60; let h = (now.getHours()) % 24; displayTime = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`; } else if(mode === "Looping") displayTime = (Date.now() % 2000 < 1000) ? "11:11" : "12:00"; else if(mode === "Reverse") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).split('').reverse().join(''); else displayTime = "ERR::"; clock.innerText = displayTime; }, 150); }
 
-        function startClock() {
-            if(clockInterval) clearInterval(clockInterval);
-            let glacialMinutes = 0;
-            clockInterval = setInterval(() => {
-                if(!currentId) return;
-                const clock = document.getElementById('liminal-clock');
-                const mode = world[currentId].time || "Standard";
-                let displayTime = "";
-                const now = new Date();
-                if(mode === "Standard") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                else if(mode === "Stagnant") displayTime = "00:00";
-                else if(mode === "Rapid") {
-                    displayTime = `${Math.floor(Math.random()*24).toString().padStart(2,'0')}:${Math.floor(Math.random()*60).toString().padStart(2,'0')}`;
-                }
-                else if(mode === "Glacial") {
-                    glacialMinutes += 0.05; 
-                    let m = (now.getMinutes() + Math.floor(glacialMinutes)) % 60;
-                    let h = (now.getHours()) % 24;
-                    displayTime = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-                }
-                else if(mode === "Looping") displayTime = (Date.now() % 2000 < 1000) ? "11:11" : "12:00";
-                else if(mode === "Reverse") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).split('').reverse().join('');
-                else displayTime = "ERR::";
-                clock.innerText = displayTime;
-            }, 150);
-        }
+        function renderMap() { const map = document.getElementById('map-view'); map.innerHTML = ""; let sysBtn = document.createElement('div'); sysBtn.className = 'btn-system-data'; sysBtn.innerText = "[ SYSTEM ]"; sysBtn.onclick = (e) => { e.stopPropagation(); toggleDataMenu(); }; map.appendChild(sysBtn); let btn = document.createElement('div'); btn.className = 'btn-surface-add'; btn.innerText = "+ NEW ENTRY POINT"; btn.onclick = (e) => { e.stopPropagation(); createSurfaceRoom(); }; map.appendChild(btn); for(let key in world) { let r = world[key]; if(!r.parentId) { let el = document.createElement('div'); el.className = 'map-icon'; el.style.left = r.x + 'px'; el.style.top = r.y + 'px'; let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`; let label = r.name; if(resonance > 20 && Math.random() > 0.5) label += ` <span class="ghost-tag">(OURS)</span>`; el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${label}</div>`; setupSmartClick(el, key); map.appendChild(el); } } }
 
-        function renderMap() {
-            const map = document.getElementById('map-view');
-            map.innerHTML = ""; 
-            
-            let sysBtn = document.createElement('div');
-            sysBtn.className = 'btn-system-data';
-            sysBtn.innerText = "[ SYSTEM ]";
-            sysBtn.onclick = (e) => { e.stopPropagation(); toggleDataMenu(); };
-            map.appendChild(sysBtn);
+        function toggleDataMenu() { let modal = document.getElementById('data-modal'); if(modal.classList.contains('hidden')) modal.classList.remove('hidden'); else modal.classList.add('hidden'); document.getElementById('data-menu-buttons').classList.remove('hidden'); document.getElementById('lexicon-view').classList.add('hidden'); }
+        function showLexicon() { document.getElementById('data-menu-buttons').classList.add('hidden'); document.getElementById('lexicon-view').classList.remove('hidden'); const container = document.getElementById('lexicon-content'); container.innerHTML = ""; for (let [term, def] of Object.entries(LEXICON)) { let item = document.createElement('div'); item.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${term}</span><br>${def}`; container.appendChild(item); } }
+        function hideLexicon() { document.getElementById('lexicon-view').classList.add('hidden'); document.getElementById('data-menu-buttons').classList.remove('hidden'); }
+        function exportData() { let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world)); let node = document.createElement('a'); node.setAttribute("href", dataStr); node.setAttribute("download", "inbetween_backup.json"); document.body.appendChild(node); node.click(); node.remove(); }
+        function importData(input) { let file = input.files[0]; if(!file) return; let reader = new FileReader(); reader.onload = function(e) { try { world = JSON.parse(e.target.result); saveMemory(); toggleDataMenu(); renderMap(); alert("Reality Restored."); } catch(err) { alert("Error: Corrupted File"); } }; reader.readAsText(file); }
+        function resetData() { if(confirm("Wipe all worlds?")) { world = JSON.parse(JSON.stringify(defaultWorld)); resonance = 0; saveMemory(); toggleDataMenu(); renderMap(); } }
+        function getDepth(id) { let depth = 0; let curr = world[id]; while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; } return depth; }
+        function generateDistortedWelcome() { const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"]; return phrases[Math.floor(Math.random() * phrases.length)]; }
+        function emergencyFlush() { SystemAudio.stopAll(); const ts = document.getElementById('transition-screen'); ts.style.opacity = "1"; setTimeout(() => { enterRoom('origin'); document.getElementById('map-view').classList.remove('hidden'); document.getElementById('room-editor-view').classList.add('hidden'); renderMap(); SystemAudio.playOSAmbience(); }, 1000); }
 
-            let btn = document.createElement('div');
-            btn.className = 'btn-surface-add';
-            btn.innerText = "+ NEW ENTRY POINT";
-            btn.onclick = (e) => { e.stopPropagation(); createSurfaceRoom(); };
-            map.appendChild(btn);
+        function enterRoom(id) { SystemAudio.stopAll(); const welcomeText = generateDistortedWelcome(); document.getElementById('transition-text').innerText = welcomeText; const ts = document.getElementById('transition-screen'); ts.style.opacity = "1"; ts.style.pointerEvents = "auto"; setTimeout(() => { try { currentId = id; let r = world[id]; if(!r) { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; return; } if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100); r.lastVisited = Date.now(); SystemAudio.updateRoomAmbience(); document.getElementById('static-tuner').value = r.tunerSweetSpot; updateResonance(r); checkMrOther(r); updateStatic(r.tunerSweetSpot); renderBreadcrumbs(id); document.getElementById('map-view').classList.add('hidden'); document.getElementById('room-editor-view').classList.remove('hidden'); document.getElementById('inp-name').value = r.name; document.getElementById('inp-time').value = r.time || "Standard"; document.getElementById('inp-reality').value = r.reality || "GROUNDED"; document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE"; document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL"; updateVisualStats(r); updateMood(r.sensation || "NEUTRAL"); startClock(); document.getElementById('inp-img-url').value = r.image || ""; document.getElementById('room-img-display').src = r.image || ""; renderTags('list-occupants', r.occupants || []); renderTags('list-remnants', r.remnants || []); document.getElementById('input-occupants').value = ""; document.getElementById('input-remnants').value = ""; renderJournal(); renderHotspots(); explainTerm(r.reality); } catch(e) { console.error("Loading Error:", e); } finally { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; } }, 1200); }
 
-            for(let key in world) {
-                let r = world[key];
-                if(!r.parentId) {
-                    let el = document.createElement('div');
-                    el.className = 'map-icon';
-                    el.style.left = r.x + 'px';
-                    el.style.top = r.y + 'px';
-                    
-                    let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
-                    
-                    // GHOST LABELS
-                    let label = r.name;
-                    if(resonance > 20 && Math.random() > 0.5) label += ` <span class="ghost-tag">(OURS)</span>`;
-                    
-                    el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${label}</div>`;
-                    
-                    setupSmartClick(el, key);
-                    map.appendChild(el);
-                }
-            }
-        }
-
-        function toggleDataMenu() {
-            let modal = document.getElementById('data-modal');
-            if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
-            else modal.classList.add('hidden');
-            document.getElementById('data-menu-buttons').classList.remove('hidden');
-            document.getElementById('lexicon-view').classList.add('hidden');
-        }
-
-        function showLexicon() {
-            document.getElementById('data-menu-buttons').classList.add('hidden');
-            document.getElementById('lexicon-view').classList.remove('hidden');
-            const container = document.getElementById('lexicon-content');
-            container.innerHTML = "";
-            for (let [term, def] of Object.entries(LEXICON)) {
-                let item = document.createElement('div');
-                item.innerHTML = `<span style="color:var(--accent); font-weight:bold;">${term}</span><br>${def}`;
-                container.appendChild(item);
-            }
-        }
-
-        function hideLexicon() {
-            document.getElementById('lexicon-view').classList.add('hidden');
-            document.getElementById('data-menu-buttons').classList.remove('hidden');
-        }
-
-        function exportData() {
-            let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
-            let node = document.createElement('a');
-            node.setAttribute("href", dataStr);
-            node.setAttribute("download", "inbetween_backup.json");
-            document.body.appendChild(node);
-            node.click();
-            node.remove();
-        }
-
-        function importData(input) {
-            let file = input.files[0];
-            if(!file) return;
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    world = JSON.parse(e.target.result);
-                    saveMemory();
-                    toggleDataMenu();
-                    renderMap();
-                    alert("Reality Restored.");
-                } catch(err) { alert("Error: Corrupted File"); }
-            };
-            reader.readAsText(file);
-        }
-
-        function resetData() {
-            if(confirm("Wipe all worlds?")) {
-                world = JSON.parse(JSON.stringify(defaultWorld));
-                resonance = 0;
-                saveMemory();
-                toggleDataMenu();
-                renderMap();
-            }
-        }
-
-        function generateDistortedWelcome() {
-            const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"];
-            return phrases[Math.floor(Math.random() * phrases.length)];
-        }
-
-        function emergencyFlush() {
-            SystemAudio.stopAll();
-            const ts = document.getElementById('transition-screen');
-            ts.style.opacity = "1";
-            setTimeout(() => {
-                enterRoom('origin');
-                document.getElementById('map-view').classList.remove('hidden');
-                document.getElementById('room-editor-view').classList.add('hidden');
-                renderMap();
-                SystemAudio.playOSAmbience();
-            }, 1000);
-        }
-
-        function enterRoom(id) {
-            SystemAudio.stopAll();
-            const welcomeText = generateDistortedWelcome();
-            document.getElementById('transition-text').innerText = welcomeText;
-            const ts = document.getElementById('transition-screen');
-            ts.style.opacity = "1";
-            ts.style.pointerEvents = "auto";
-
-            setTimeout(() => {
-                try {
-                    currentId = id;
-                    let r = world[id];
-                    if(!r) { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; return; }
-                    if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
-
-                    r.lastVisited = Date.now();
-                    SystemAudio.updateRoomAmbience();
-                    document.getElementById('static-tuner').value = r.tunerSweetSpot;
-                    
-                    updateResonance(r);
-                    checkMrOther(r);
-                    updateStatic(r.tunerSweetSpot);
-
-                    renderBreadcrumbs(id);
-                    document.getElementById('map-view').classList.add('hidden');
-                    document.getElementById('room-editor-view').classList.remove('hidden');
-                    
-                    document.getElementById('inp-name').value = r.name;
-                    document.getElementById('inp-time').value = r.time || "Standard";
-                    document.getElementById('inp-reality').value = r.reality || "GROUNDED";
-                    document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
-                    document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
-                    
-                    updateVisualStats(r);
-                    updateMood(r.sensation || "NEUTRAL");
-                    startClock(); 
-
-                    document.getElementById('inp-img-url').value = r.image || "";
-                    document.getElementById('room-img-display').src = r.image || "";
-
-                    renderTags('list-occupants', r.occupants || []);
-                    renderTags('list-remnants', r.remnants || []);
-                    document.getElementById('input-occupants').value = "";
-                    document.getElementById('input-remnants').value = "";
-                    
-                    renderJournal();
-                    renderHotspots();
-                    explainTerm(r.reality);
-                } catch(e) { console.error("Loading Error:", e); } 
-                finally { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; }
-            }, 1200);
-        }
-
-        function calculateDecay(r) {
-            if(!r.lastVisited) { r.lastVisited = Date.now(); return 0; }
-            let diff = Date.now() - r.lastVisited;
-            return Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
-        }
-
-        function updateStatic(val) {
-            if(!currentId) return;
-            let r = world[currentId];
-            let sweetSpot = r.tunerSweetSpot || 50;
-            let distance = Math.abs(val - sweetSpot);
-            let opacity = distance < 5 ? 0 : Math.min(1, (distance - 5) / 40);
-            let finalOpacity = Math.max(opacity, calculateDecay(r) / 100);
-            currentStaticOpacity = finalOpacity; 
-
-            document.getElementById('static-overlay').style.opacity = finalOpacity;
-            const img = document.getElementById('room-img-display');
-            if(finalOpacity > 0.2) {
-                 img.className = ["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere) ? 'decay-bright' : 'decay-dark';
-            } else { img.className = ""; }
-            
-            const btn = document.getElementById('btn-save');
-            if(finalOpacity < 0.1) {
-                btn.style.background = "var(--accent)";
-                btn.innerText = "STABILIZE REALITY";
-            } else {
-                btn.style.background = "#cbd5e0";
-                btn.innerText = "SIGNAL UNSTABLE";
-            }
-        }
-
-        function updateResonance(r) {
-            if (["HOLLOW", "WATCHED"].includes(r.reality) || ["KENOPSIA"].includes(r.sensation)) resonance += 5;
-            else resonance = Math.max(0, resonance - 2);
-            saveMemory();
-        }
-
-        function checkMrOther(r) {
-            const img = document.getElementById('room-img-display');
-            if(resonance > 50) img.classList.add('bowing-effect');
-        }
-
-        const VOCAB = {
-            subjects: ["IT", "WE", "MR. OTHER", "THE ROOM", "THE REFLECTION"],
-            verbs: ["WATCHES", "MIMICS", "KNOWS", "SEES", "LOVES"],
-            objects: ["US", "OUR FACE", "OUR BREATH", "THE TRUTH", "FOREVER"]
-        };
-        function generateSentence() {
-            let s = Math.random() > 0.5 ? VOCAB.subjects[0] : VOCAB.subjects[1];
-            return s + " " + VOCAB.verbs[0] + " " + VOCAB.objects[0]; 
-        }
-        function analyzeJournalInput(text) {
-            if (resonance < 15) return; 
-            setTimeout(() => { addMrOtherLog(generateSentence()); }, 2000); 
-        }
-        function addMrOtherLog(text) {
-            if(!currentId) return;
-            if(!world[currentId].journal) world[currentId].journal = [];
-            world[currentId].journal.push({ time: "??:??", text: text, type: "other" });
-            renderJournal();
-        }
-
-        function renderJournal() {
-            const feed = document.getElementById('journal-feed');
-            feed.innerHTML = "";
-            (world[currentId].journal || []).forEach(log => {
-                let div = document.createElement('div');
-                div.className = 'log-entry' + (log.type === "other" ? ' mr-other-entry' : '');
-                div.innerHTML = `<span class="log-timestamp">[${log.time}]</span> ${log.text}`;
-                feed.appendChild(div);
-            });
-            feed.scrollTop = feed.scrollHeight;
-        }
-
-        function addLogEntry() {
-            let inp = document.getElementById('inp-journal');
-            let val = inp.value.trim();
-            if(!val || !currentId) return;
-            
-            // MR OTHER SANITIZATION
-            val = MrOtherAI.sanitize(val);
-            
-            let time = document.getElementById('liminal-clock').innerText;
-            if(!world[currentId].journal) world[currentId].journal = [];
-            world[currentId].journal.push({ time: time, text: val });
-            
-            MrOtherAI.vandalize();
-            analyzeJournalInput(val);
-
-            inp.value = "";
-            saveRoom();
-            renderJournal();
-        }
-
+        function calculateDecay(r) { if(!r.lastVisited) { r.lastVisited = Date.now(); return 0; } let diff = Date.now() - r.lastVisited; return Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); }
+        function updateStatic(val) { if(!currentId) return; let r = world[currentId]; let sweetSpot = r.tunerSweetSpot || 50; let distance = Math.abs(val - sweetSpot); let opacity = distance < 5 ? 0 : Math.min(1, (distance - 5) / 40); let finalOpacity = Math.max(opacity, calculateDecay(r) / 100); currentStaticOpacity = finalOpacity; document.getElementById('static-overlay').style.opacity = finalOpacity; const img = document.getElementById('room-img-display'); if(finalOpacity > 0.2) { img.className = ["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere) ? 'decay-bright' : 'decay-dark'; } else { img.className = ""; } const btn = document.getElementById('btn-save'); if(finalOpacity < 0.1) { btn.style.background = "var(--accent)"; btn.innerText = "STABILIZE REALITY"; } else { btn.style.background = "#cbd5e0"; btn.innerText = "SIGNAL UNSTABLE"; } }
+        function updateResonance(r) { if (["HOLLOW", "WATCHED"].includes(r.reality) || ["KENOPSIA"].includes(r.sensation)) resonance += 5; else resonance = Math.max(0, resonance - 2); saveMemory(); }
+        function checkMrOther(r) { const img = document.getElementById('room-img-display'); if(resonance > 50) img.classList.add('bowing-effect'); }
+        function analyzeJournalInput(text) { if (resonance < 15) return; let context = "neutral"; if (text.includes("scared")) context = "fear"; if (text.includes("love")) context = "love"; setTimeout(() => { addMrOtherLog(generateSentence(context)); }, 2000); }
+        function addMrOtherLog(text) { if(!currentId) return; if(!world[currentId].journal) world[currentId].journal = []; world[currentId].journal.push({ time: "??:??", text: text, type: "other" }); renderJournal(); }
+        function renderJournal() { const feed = document.getElementById('journal-feed'); feed.innerHTML = ""; (world[currentId].journal || []).forEach(log => { let div = document.createElement('div'); div.className = 'log-entry' + (log.type === "other" ? ' mr-other-entry' : ''); div.innerHTML = `<span class="log-timestamp">[${log.time}]</span> ${log.text}`; feed.appendChild(div); }); feed.scrollTop = feed.scrollHeight; }
+        function addLogEntry() { let inp = document.getElementById('inp-journal'); let val = inp.value.trim(); if(!val || !currentId) return; val = MrOtherAI.sanitize(val); let time = document.getElementById('liminal-clock').innerText; if(!world[currentId].journal) world[currentId].journal = []; world[currentId].journal.push({ time: time, text: val }); MrOtherAI.vandalize(); analyzeJournalInput(val); inp.value = ""; saveRoom(); renderJournal(); }
         function updateVisualStats(r) { document.getElementById('room-stats').innerText = `${r.reality} | ${r.atmosphere} | ${r.sensation}`; }
-        function updateMood(sensation) {
-            const editor = document.getElementById('room-editor-view');
-            editor.style.background = sensation === "KENOPSIA" ? "linear-gradient(180deg, #e4e7ec 0%, #d0d6e8 100%)" : "linear-gradient(180deg, #f0f8ff 0%, #ffffff 100%)";
-        }
-
-        function createConnection() {
-            let newId = "room_" + Date.now();
-            world[newId] = { 
-                id: newId, parentId: currentId,
-                name: "Sub-Sector", time: "Standard", reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
-                occupants: [], remnants: [], journal: [], image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100)
-            };
-            world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
-            saveRoom(); enterRoom(currentId); 
-        }
-
-        function renderBreadcrumbs(id) {
-            let path = []; let curr = world[id];
-            while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; }
-            let nav = document.getElementById('nav-bar');
-            nav.innerHTML = `<span class="crumb" onclick="closeEditor(this)">MAP</span>`;
-            path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; });
-        }
-
-        function closeEditor(btn) {
-            // DESPERATE ARCHITECT (GLITCH ON EXIT)
-            if(Math.random() > 0.7) {
-                btn.innerText = "STAY";
-                btn.classList.add("crumb-glitch");
-                setTimeout(() => {
-                    btn.innerText = "MAP";
-                    btn.classList.remove("crumb-glitch");
-                    performClose();
-                }, 500);
-            } else {
-                performClose();
-            }
-        }
-        
-        function performClose() {
-            saveRoom();
-            SystemAudio.stopAll();
-            SystemAudio.playOSAmbience();
-            if(clockInterval) clearInterval(clockInterval);
-            document.getElementById('room-editor-view').classList.add('hidden');
-            document.getElementById('map-view').classList.remove('hidden');
-            renderMap();
-        }
-
-        function saveRoom() {
-            if(!currentId) return;
-            let r = world[currentId];
-            r.name = document.getElementById('inp-name').value;
-            r.time = document.getElementById('inp-time').value;
-            r.reality = document.getElementById('inp-reality').value;
-            r.atmosphere = document.getElementById('inp-atmosphere').value;
-            r.sensation = document.getElementById('inp-sensation').value;
-            r.image = document.getElementById('inp-img-url').value;
-            
-            if(currentStaticOpacity < 0.1) {
-                r.lastVisited = Date.now();
-                let ripple = document.getElementById('scan-ripple');
-                ripple.classList.remove('ripple-anim');
-                void ripple.offsetWidth;
-                ripple.classList.add('ripple-anim');
-                SystemAudio.playPurge();
-            } else { addMrOtherLog("SIGNAL LOST."); }
-
-            document.getElementById('room-img-display').src = r.image || "";
-            updateVisualStats(r); updateMood(r.sensation); saveMemory();
-        }
-
-        function addTag(type) {
-            let input = document.getElementById('input-' + type); let val = input.value.trim(); if(!val || !currentId) return;
-            if(resonance > 90 && type === 'occupants') { addMrOtherLog("NO. ONLY US."); input.value = ""; return; }
-            if(!world[currentId][type]) world[currentId][type] = [];
-            world[currentId][type].push(val); input.value = ""; 
-            renderTags('list-' + type, world[currentId][type]); saveRoom();
-        }
-
+        function updateMood(sensation) { const editor = document.getElementById('room-editor-view'); editor.style.background = sensation === "KENOPSIA" ? "linear-gradient(180deg, #e4e7ec 0%, #d0d6e8 100%)" : "linear-gradient(180deg, #f0f8ff 0%, #ffffff 100%)"; }
+        function createConnection() { let newId = "room_" + Date.now(); world[newId] = { id: newId, parentId: currentId, name: "Sub-Sector", time: "Standard", reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA", occupants: [], remnants: [], journal: [], image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100) }; world[currentId].hotspots.push({ target: newId, x: 70, y: 80 }); saveRoom(); enterRoom(currentId); }
+        function renderBreadcrumbs(id) { let path = []; let curr = world[id]; while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; } let nav = document.getElementById('nav-bar'); nav.innerHTML = `<span class="crumb" onclick="closeEditor(this)">MAP</span>`; path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; }); }
+        function closeEditor(btn) { if(Math.random() > 0.7) { btn.innerText = "STAY"; btn.classList.add("crumb-glitch"); setTimeout(() => { btn.innerText = "MAP"; btn.classList.remove("crumb-glitch"); performClose(); }, 500); } else { performClose(); } }
+        function performClose() { saveRoom(); SystemAudio.stopAll(); SystemAudio.playOSAmbience(); if(clockInterval) clearInterval(clockInterval); document.getElementById('room-editor-view').classList.add('hidden'); document.getElementById('map-view').classList.remove('hidden'); renderMap(); }
+        function saveRoom() { if(!currentId) return; let r = world[currentId]; r.name = document.getElementById('inp-name').value; r.time = document.getElementById('inp-time').value; r.reality = document.getElementById('inp-reality').value; r.atmosphere = document.getElementById('inp-atmosphere').value; r.sensation = document.getElementById('inp-sensation').value; r.image = document.getElementById('inp-img-url').value; if(currentStaticOpacity < 0.1) { r.lastVisited = Date.now(); let ripple = document.getElementById('scan-ripple'); ripple.classList.remove('ripple-anim'); void ripple.offsetWidth; ripple.classList.add('ripple-anim'); SystemAudio.playPurge(); } else { addMrOtherLog("SIGNAL LOST."); } document.getElementById('room-img-display').src = r.image || ""; updateVisualStats(r); updateMood(r.sensation); saveMemory(); }
+        function addTag(type) { let input = document.getElementById('input-' + type); let val = input.value.trim(); if(!val || !currentId) return; if(resonance > 90 && type === 'occupants') { addMrOtherLog("NO. ONLY US."); input.value = ""; return; } if(!world[currentId][type]) world[currentId][type] = []; world[currentId][type].push(val); input.value = ""; renderTags('list-' + type, world[currentId][type]); saveRoom(); }
         function renderTags(id, tags) { document.getElementById(id).innerHTML = (tags || []).map(t => `<div class="tag-chip">${t} <span class="tag-close" onclick="this.parentElement.remove()">x</span></div>`).join(''); }
-
-        function renderHotspots() {
-            const layer = document.getElementById('hotspot-layer');
-            layer.innerHTML = (world[currentId].hotspots || []).map(h => `<div class="hotspot" style="left:${h.x}%; top:${h.y}%" onclick="enterRoom('${h.target}')">↗</div>`).join('');
-        }
-
-        function setupHotspotDrag(element, index) { 
-            let startX, startY, isDragging = false;
-            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; });
-            element.addEventListener('touchmove', (e) => {
-                let x = e.touches[0].clientX; let y = e.touches[0].clientY;
-                if (Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5) {
-                    isDragging = true;
-                    let rect = element.parentElement.getBoundingClientRect();
-                    element.style.left = ((x - rect.left) / rect.width * 100) + '%';
-                    element.style.top = ((y - rect.top) / rect.height * 100) + '%';
-                }
-            });
-            element.addEventListener('touchend', (e) => {
-                if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
-                else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
-            }); 
-        }
-
-        function createSurfaceRoom() {
-            let id = "entry_" + Date.now();
-            let randomSpot = Math.floor(Math.random() * 100);
-            world[id] = { id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", occupants: [], remnants: [], journal: [], image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: randomSpot };
-            saveMemory(); renderMap();
-        }
-
-        function setupSmartClick(element, id) {
-            let startX, startY, isDragging = false;
-            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
-            element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) isDragging = true; });
-            element.addEventListener('touchend', () => { if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } });
-        }
-
-        document.getElementById('inp-file').addEventListener('change', function() {
-            if(this.files && this.files[0]) {
-                let reader = new FileReader();
-                reader.onload = (e) => { document.getElementById('inp-img-url').value = e.target.result; document.getElementById('room-img-display').src = e.target.result; };
-                reader.readAsDataURL(this.files[0]);
-            }
-        });
+        function renderHotspots() { const layer = document.getElementById('hotspot-layer'); layer.innerHTML = (world[currentId].hotspots || []).map(h => `<div class="hotspot" style="left:${h.x}%; top:${h.y}%" onclick="enterRoom('${h.target}')">↗</div>`).join(''); }
+        function setupHotspotDrag(element, index) { let startX, startY, isDragging = false; element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; }); element.addEventListener('touchmove', (e) => { let x = e.touches[0].clientX; let y = e.touches[0].clientY; if (Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5) { isDragging = true; let rect = element.parentElement.getBoundingClientRect(); element.style.left = ((x - rect.left) / rect.width * 100) + '%'; element.style.top = ((y - rect.top) / rect.height * 100) + '%'; } }); element.addEventListener('touchend', (e) => { if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); } else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); } }); }
+        function createSurfaceRoom() { let id = "entry_" + Date.now(); let randomSpot = Math.floor(Math.random() * 100); world[id] = { id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", occupants: [], remnants: [], journal: [], image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: randomSpot }; saveMemory(); renderMap(); }
+        function setupSmartClick(element, id) { let startX, startY, isDragging = false; element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; }); element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) isDragging = true; }); element.addEventListener('touchend', () => { if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } }); }
+        document.getElementById('inp-file').addEventListener('change', function() { if(this.files && this.files[0]) { let reader = new FileReader(); reader.onload = (e) => { document.getElementById('inp-img-url').value = e.target.result; document.getElementById('room-img-display').src = e.target.result; }; reader.readAsDataURL(this.files[0]); } });
     </script>
 </body>
 </html>
