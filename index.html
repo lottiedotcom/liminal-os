@@ -20,6 +20,7 @@
             --accent: #38b2ac;         /* Teal */
             --accent-fade: #e6fffa;    /* Light Teal */
             --border: #cbd5e0;
+            --danger: #e53e3e;         /* Red for Mr. Other */
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
@@ -71,25 +72,6 @@
             color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
             font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        
-        /* DICTIONARY MODAL */
-        #dict-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 300; display: flex; flex-direction: column;
-        }
-        #dict-content {
-            flex-grow: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px;
-        }
-        .dict-section { margin-bottom: 25px; }
-        .dict-title { font-size: 12px; font-weight: bold; color: var(--accent); letter-spacing: 2px; border-bottom: 1px solid var(--grid); padding-bottom: 5px; margin-bottom: 10px; }
-        .dict-term { font-size: 11px; font-weight: bold; color: var(--text); margin-top: 10px; text-transform: uppercase; }
-        .dict-def { font-size: 11px; color: #718096; line-height: 1.4; margin-left: 10px; }
-        .dict-close {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--text); color: #fff; padding: 10px 30px; border-radius: 30px;
-            font-size: 10px; font-weight: bold; border: none; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
 
         /* Map Icons */
         .map-icon {
@@ -126,12 +108,32 @@
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
 
+        /* VISUAL CONTAINER & MR OTHER EFFECTS */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
-            border-bottom: 4px solid var(--accent);
+            border-bottom: 4px solid var(--accent); overflow: hidden;
         }
-        #room-img-display { width: 100%; height: 100%; object-fit: contain; }
+        #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.5s; }
         
+        /* Effects */
+        .static-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJnoiPjGZldHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuNjUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZykiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==');
+            opacity: 0; pointer-events: none; mix-blend-mode: overlay;
+        }
+        .bowing-effect { transform: scale(1.1) rotate(1deg); filter: blur(2px) contrast(1.2); }
+        .dark-mode { filter: brightness(0.3) grayscale(1); }
+
+        /* STATIC TUNER */
+        #static-tuner-container {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: 60%; display: flex; align-items: center; gap: 10px;
+            z-index: 50; opacity: 0.8;
+        }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: #fff; border: 2px solid var(--accent); margin-top: -5px; box-shadow: 0 0 10px #fff; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.5); }
+
         #room-stats {
             position: absolute; top: 15px; left: 15px; 
             background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; 
@@ -169,6 +171,35 @@
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
+        /* GHOST BOX / INTERPRETER */
+        #interpreter-bar {
+            font-family: var(--mono); font-size: 10px; color: var(--accent);
+            text-transform: uppercase; margin-top: 5px; height: 14px;
+            letter-spacing: 1px; font-weight: bold;
+        }
+
+        /* LIVING JOURNAL */
+        #journal-container {
+            background: rgba(255,255,255,0.5); border: 1px solid var(--border);
+            border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;
+            height: 150px;
+        }
+        #journal-feed {
+            flex-grow: 1; overflow-y: auto; padding: 10px; 
+            font-family: var(--mono); font-size: 10px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .log-entry { color: #4a5568; border-left: 2px solid transparent; padding-left: 5px; }
+        .log-timestamp { color: #cbd5e0; margin-right: 5px; }
+        .mr-other-entry { color: var(--danger); font-weight: bold; border-left: 2px solid var(--danger); }
+        .log-edited { text-decoration: line-through; opacity: 0.6; }
+        .log-new { font-weight: bold; color: var(--danger); }
+
+        #journal-input-area {
+            display: flex; border-top: 1px solid var(--border);
+        }
+        #inp-journal { border: none; background: #fff; border-radius: 0; }
+        #btn-journal { border: none; background: var(--text); color: #fff; width: 50px; cursor: pointer; font-weight: bold; }
+
         /* DIAGNOSTICS GRID */
         .diag-grid {
             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
@@ -202,7 +233,6 @@
 
     <div id="data-modal" class="hidden">
         <h3 style="letter-spacing: 2px; color: #718096;">SYSTEM DATA</h3>
-        <button class="data-btn" onclick="toggleDictionary()">DICTIONARY</button> 
         <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
         <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
         <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
@@ -210,61 +240,18 @@
         <input type="file" id="import-file" style="display:none;" onchange="importData(this)">
     </div>
 
-    <div id="dict-modal" class="hidden">
-        <div id="dict-content">
-            <h2 style="text-align:center; font-weight:300; letter-spacing:2px; margin-bottom:30px;">LEXICON</h2>
-
-            <div class="dict-section">
-                <div class="dict-title">TEMPORAL STATE (TIME)</div>
-                <div class="dict-term">STANDARD</div><div class="dict-def">Baseline temporal flow. 1:1 with reality.</div>
-                <div class="dict-term">STAGNANT</div><div class="dict-def">Absolute zero temporal movement. Stagnation.</div>
-                <div class="dict-term">GLACIAL</div><div class="dict-def">Slow, heavy progression. Time crawls.</div>
-                <div class="dict-term">RAPID</div><div class="dict-def">Accelerated entropy. Time spins wildly out of control.</div>
-                <div class="dict-term">LOOPING</div><div class="dict-def">Closed loop system. Repetitive events. 11:11 syndrome.</div>
-                <div class="dict-term">REVERSE</div><div class="dict-def">Inverted flow. Events happen in reverse order.</div>
-                <div class="dict-term">NON-LINEAR</div><div class="dict-def">Fatal error. Time has shattered into non-linear shards.</div>
-            </div>
-
-            <div class="dict-section">
-                <div class="dict-title">REALITY (PHYSICAL STATE)</div>
-                <div class="dict-term">GROUNDED</div><div class="dict-def">1:1 with baseline reality. Physically stable.</div>
-                <div class="dict-term">TRANSITIONAL</div><div class="dict-def">A space of movement (hallways, stairs). Not a destination.</div>
-                <div class="dict-term">ARTIFICIAL</div><div class="dict-def">Constructed reality. Too clean. Simulation-like quality.</div>
-                <div class="dict-term">DORMANT</div><div class="dict-def">Asleep. Waiting for an observer to exist.</div>
-                <div class="dict-term">BUFFERED</div><div class="dict-def">High latency. Air feels thick or static. Slow physics.</div>
-                <div class="dict-term">HOLLOW</div><div class="dict-def">Visuals without substance. Empty behind the surfaces.</div>
-            </div>
-
-            <div class="dict-section">
-                <div class="dict-title">ATMOSPHERE (ENVIRONMENT)</div>
-                <div class="dict-term">STERILE</div><div class="dict-def">Devoid of life. Clinical cleanliness. Bright.</div>
-                <div class="dict-term">STAGNANT</div><div class="dict-def">Air has not moved in decades. Dust is suspended in time.</div>
-                <div class="dict-term">HUMMING</div><div class="dict-def">Low-frequency mechanical or electrical drone.</div>
-                <div class="dict-term">HAZY</div><div class="dict-def">Soft focus. Dream logic visual impairment. Fog.</div>
-                <div class="dict-term">SUBMERGED</div><div class="dict-def">Sensation of being underwater. Muffled and slow.</div>
-            </div>
-
-            <div class="dict-section">
-                <div class="dict-title">SENSATION (EMOTIONAL WEIGHT)</div>
-                <div class="dict-term">NEUTRAL</div><div class="dict-def">Baseline emotional state. No affect.</div>
-                <div class="dict-term">KENOPSIA</div><div class="dict-def">The eerie atmosphere of a place that’s usually bustling with people but is now abandoned.</div>
-                <div class="dict-term">ANEMOIA</div><div class="dict-def">Nostalgia for a time or place you’ve never known.</div>
-                <div class="dict-term">MUTED</div><div class="dict-def">Sensory dampening. Sounds are swallowed by the walls.</div>
-                <div class="dict-term">WATCHED</div><div class="dict-def">The architecture itself is observing you. Scopaesthesia.</div>
-                <div class="dict-term">JAMAIS VU</div><div class="dict-def">The opposite of Déjà vu. A familiar place feels unrecognizable.</div>
-                <div class="dict-term">FLOATING</div><div class="dict-def">Dissociation. Detachment from physical form.</div>
-            </div>
-        </div>
-        <button class="dict-close" onclick="toggleDictionary()">CLOSE LEXICON</button>
-    </div>
-
     <div id="room-editor-view" class="hidden">
         <div id="nav-bar"></div>
         <div id="visual-container">
             <img id="room-img-display" src="">
+            <div id="static-overlay" class="static-overlay"></div>
             <div id="hotspot-layer"></div>
             <div id="room-stats">GROUNDED | STERILE | NEUTRAL</div>
             <div id="liminal-clock">00:00</div>
+            
+            <div id="static-tuner-container">
+                <input type="range" id="static-tuner" min="0" max="100" value="0" oninput="updateStatic(this.value)">
+            </div>
         </div>
         <div id="editor-controls">
             
@@ -276,7 +263,7 @@
             <div class="field-group">
                 <label>Liminal Diagnostics</label>
                 <div class="diag-grid">
-                    <select id="inp-reality">
+                    <select id="inp-reality" onchange="explainTerm(this.value)">
                         <option value="GROUNDED">Grounded</option>
                         <option value="TRANSITIONAL">Transitional</option>
                         <option value="ARTIFICIAL">Artificial</option>
@@ -284,14 +271,14 @@
                         <option value="BUFFERED">Buffered</option>
                         <option value="HOLLOW">Hollow</option>
                     </select>
-                    <select id="inp-atmosphere">
+                    <select id="inp-atmosphere" onchange="explainTerm(this.value)">
                         <option value="STERILE">Sterile</option>
                         <option value="STAGNANT">Stagnant</option>
                         <option value="HUMMING">Humming</option>
                         <option value="HAZY">Hazy</option>
                         <option value="SUBMERGED">Submerged</option>
                     </select>
-                    <select id="inp-sensation" onchange="updateMood(this.value)">
+                    <select id="inp-sensation" onchange="updateMood(this.value); explainTerm(this.value)">
                         <option value="NEUTRAL">Neutral</option>
                         <option value="KENOPSIA">Kenopsia</option>
                         <option value="ANEMOIA">Anemoia</option>
@@ -301,11 +288,12 @@
                         <option value="FLOATING">Floating</option>
                     </select>
                 </div>
+                <div id="interpreter-bar">SCANNING...</div>
             </div>
 
             <div class="field-group">
                 <label>Temporal State</label>
-                <select id="inp-time">
+                <select id="inp-time" onchange="explainTerm(this.value)">
                     <option value="Standard">Standard</option>
                     <option value="Stagnant">Stagnant</option>
                     <option value="Glacial">Glacial</option>
@@ -316,22 +304,6 @@
                 </select>
             </div>
 
-            <div class="field-group">
-                <label>Olfactory (Smell)</label>
-                <div class="tag-container" id="list-smell"></div>
-                <div class="tag-wrapper">
-                    <input type="text" id="input-smell" placeholder="Type smell...">
-                    <button class="tag-add-btn" onclick="addTag('smell')">+</button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label>Audio (Sound)</label>
-                <div class="tag-container" id="list-audio"></div>
-                <div class="tag-wrapper">
-                    <input type="text" id="input-audio" placeholder="Type sound...">
-                    <button class="tag-add-btn" onclick="addTag('audio')">+</button>
-                </div>
-            </div>
             <div class="field-group">
                 <label>Occupants</label>
                 <div class="tag-container" id="list-occupants"></div>
@@ -350,8 +322,14 @@
             </div>
 
             <div class="field-group">
-                <label>Observation Log</label>
-                <textarea id="inp-desc" rows="3"></textarea>
+                <label>Observation Journal</label>
+                <div id="journal-container">
+                    <div id="journal-feed"></div>
+                    <div id="journal-input-area">
+                        <input type="text" id="inp-journal" placeholder="Enter log..." style="flex-grow:1;">
+                        <button id="btn-journal" onclick="addLogEntry()">LOG</button>
+                    </div>
+                </div>
             </div>
 
             <div class="field-group">
@@ -387,23 +365,63 @@
                 id: "origin", parentId: null, name: "The Lobby", 
                 time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
-                desc: "The beginning.", image: "", x: 150, y: 200, hotspots: [] 
+                journal: [{time: "00:00", text: "System initialized."}], 
+                image: "", x: 150, y: 200, hotspots: [] 
             }
         };
         let world = defaultWorld;
+        let resonance = 0; // MR OTHER RESONANCE
         let currentId = null;
         let clockInterval = null;
-        
-        // Glacial Clock State
         let glacialMinutes = 0;
+
+        // DICTIONARY DEFINITIONS FOR GHOST BOX
+        const LEXICON = {
+            "GROUNDED": "1:1 with baseline reality. Stable.",
+            "TRANSITIONAL": "A space of movement. Not a destination.",
+            "ARTIFICIAL": "Constructed reality. Too clean.",
+            "DORMANT": "Asleep. Waiting for an observer.",
+            "BUFFERED": "High latency. Air feels thick.",
+            "HOLLOW": "Visuals without substance. Empty.",
+            "STERILE": "Devoid of life. Clinical.",
+            "STAGNANT": "Air has not moved in decades.",
+            "HUMMING": "Low-frequency mechanical drone.",
+            "HAZY": "Soft focus. Dream logic.",
+            "SUBMERGED": "Sensation of being underwater.",
+            "NEUTRAL": "Baseline emotional state.",
+            "KENOPSIA": "Atmosphere of a place usually bustling, now abandoned.",
+            "ANEMOIA": "Nostalgia for a time you've never known.",
+            "MUTED": "Sensory dampening.",
+            "WATCHED": "The architecture is observing you.",
+            "JAMAIS VU": "Familiar place feels unrecognizable.",
+            "FLOATING": "Dissociation. Detachment.",
+            "Standard": "Baseline flow.",
+            "Stagnant": "Time stopped.",
+            "Glacial": "Time crawls heavily.",
+            "Rapid": "Time spins wildly.",
+            "Looping": "Recursive events.",
+            "Reverse": "Inverted flow.",
+            "Non-Linear": "Fatal error."
+        };
+
+        function explainTerm(term) {
+            const el = document.getElementById('interpreter-bar');
+            if(LEXICON[term]) el.innerText = "> " + LEXICON[term];
+            else el.innerText = "SCANNING...";
+        }
 
         function loadMemory() {
             const saved = localStorage.getItem('inbetween_data');
+            const savedRes = localStorage.getItem('mr_other_resonance');
             if(saved) {
                 try { world = JSON.parse(saved); } catch(e) {}
             }
+            if(savedRes) resonance = parseFloat(savedRes);
         }
-        function saveMemory() { localStorage.setItem('inbetween_data', JSON.stringify(world)); }
+        function saveMemory() { 
+            localStorage.setItem('inbetween_data', JSON.stringify(world)); 
+            localStorage.setItem('mr_other_resonance', resonance);
+        }
 
         function bootUp() {
             loadMemory();
@@ -412,51 +430,39 @@
             renderMap();
         }
 
-        // --- CLOCK LOGIC (UPDATED WITH GLACIAL/RAPID) ---
+        // --- CLOCK & MR OTHER LOGIC ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
-            glacialMinutes = 0; // Reset glacial counter on entry
+            glacialMinutes = 0;
             
             clockInterval = setInterval(() => {
                 if(!currentId) return;
                 const clock = document.getElementById('liminal-clock');
                 const mode = world[currentId].time || "Standard";
+                let displayTime = "";
                 const now = new Date();
 
-                if(mode === "Standard") {
-                    clock.innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                }
-                else if(mode === "Stagnant") {
-                    clock.innerText = "00:00";
-                }
+                // CLOCK MODES
+                if(mode === "Standard") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                else if(mode === "Stagnant") displayTime = "00:00";
                 else if(mode === "Rapid") {
-                    // Random time every tick (Fast)
                     let h = Math.floor(Math.random() * 24).toString().padStart(2,'0');
                     let m = Math.floor(Math.random() * 60).toString().padStart(2,'0');
-                    clock.innerText = `${h}:${m}`;
+                    displayTime = `${h}:${m}`;
                 }
                 else if(mode === "Glacial") {
-                    // Increments 1 minute every 30 real ticks (approx 4.5 seconds)
-                    // Starts at 03:00 and moves slowly
-                    let baseH = 3;
-                    let baseM = 0;
-                    glacialMinutes += 0.05; // Slow increment
+                    let baseH = 3; let baseM = 0;
+                    glacialMinutes += 0.05; 
                     let addedM = Math.floor(glacialMinutes);
                     let m = (baseM + addedM) % 60;
                     let h = (baseH + Math.floor((baseM + addedM) / 60)) % 24;
-                    clock.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+                    displayTime = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
                 }
-                else if(mode === "Looping") {
-                    clock.innerText = (Date.now() % 2000 < 1000) ? "11:11" : "12:00";
-                }
-                else if(mode === "Reverse") {
-                     let t = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                     clock.innerText = t.split('').reverse().join('');
-                }
-                else { // Non-Linear
-                    const glitches = ["ERR::", "NULL", "88:88", "??:??"];
-                    clock.innerText = glitches[Math.floor(Math.random()*glitches.length)];
-                }
+                else if(mode === "Looping") displayTime = (Date.now() % 2000 < 1000) ? "11:11" : "12:00";
+                else if(mode === "Reverse") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).split('').reverse().join('');
+                else displayTime = ["ERR::", "NULL", "88:88", "??:??"][Math.floor(Math.random()*4)];
+                
+                clock.innerText = displayTime;
             }, 150);
         }
 
@@ -499,12 +505,6 @@
             else modal.classList.add('hidden');
         }
 
-        function toggleDictionary() {
-            let dict = document.getElementById('dict-modal');
-            if(dict.classList.contains('hidden')) dict.classList.remove('hidden');
-            else dict.classList.add('hidden');
-        }
-
         function exportData() {
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
             let node = document.createElement('a');
@@ -534,6 +534,7 @@
         function resetData() {
             if(confirm("Wipe all worlds?")) {
                 world = JSON.parse(JSON.stringify(defaultWorld));
+                resonance = 0;
                 saveMemory();
                 toggleDataMenu();
                 renderMap();
@@ -543,32 +544,171 @@
         function enterRoom(id) {
             currentId = id;
             let r = world[id];
+            
+            // MR OTHER CALCULATIONS
+            updateResonance(r);
+            checkMrOther(r);
+
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
             renderBreadcrumbs(id);
             
             document.getElementById('inp-name').value = r.name;
             document.getElementById('inp-time').value = r.time || "Standard";
-            
             document.getElementById('inp-reality').value = r.reality || "GROUNDED";
             document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
             document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
             
-            // Trigger Visual Updates (Stats & Mood)
             updateVisualStats(r);
             updateMood(r.sensation || "NEUTRAL");
-            startClock(); // START THE BROKEN CLOCK
+            startClock(); 
 
-            document.getElementById('inp-desc').value = r.desc || "";
             document.getElementById('inp-img-url').value = r.image || "";
             document.getElementById('room-img-display').src = r.image || "";
 
-            renderTags('list-smell', r.smells || []);
-            renderTags('list-audio', r.audio || []);
             renderTags('list-occupants', r.occupants || []);
             renderTags('list-remnants', r.remnants || []);
-            ['smell','audio','occupants','remnants'].forEach(t => document.getElementById('input-'+t).value = "");
+            document.getElementById('input-occupants').value = "";
+            document.getElementById('input-remnants').value = "";
+            
+            renderJournal();
             renderHotspots();
+            explainTerm(r.reality);
+        }
+
+        // --- MR OTHER SYSTEMS ---
+        function updateResonance(r) {
+            // Decay
+            if (r.reality === "GROUNDED" && resonance > 0) resonance -= 5;
+            
+            // Growth
+            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 10;
+            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 15;
+            
+            let items = (r.remnants || []).join(" ").toLowerCase();
+            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 20;
+
+            if (resonance > 100) resonance = 100;
+            if (resonance < 0) resonance = 0;
+            saveMemory();
+        }
+
+        function checkMrOther(r) {
+            const img = document.getElementById('room-img-display');
+            const overlay = document.getElementById('static-overlay');
+            const tuner = document.getElementById('static-tuner');
+            
+            // Reset effects
+            img.className = "";
+            overlay.classList.remove('dark-mode');
+            tuner.value = 0;
+            updateStatic(0);
+
+            // STAGE 1: PASSING (Resonance 20-50)
+            if (resonance > 20 && Math.random() < 0.3) {
+                const sym = ["Sudden chill.", "Smell of ozone.", "Ringing in left ear.", "Metallic taste."];
+                addSystemLog(sym[Math.floor(Math.random()*sym.length)]);
+            }
+
+            // STAGE 2: DIRECT (Resonance 51-80)
+            if (resonance > 50) {
+                img.classList.add('bowing-effect');
+                tuner.value = 30;
+                updateStatic(30);
+                if(Math.random() < 0.4) editJournal(r);
+            }
+
+            // STAGE 3: PROLONGED (Resonance 81+)
+            if (resonance > 80) {
+                img.classList.add('dark-mode');
+                tuner.value = 80;
+                updateStatic(80);
+                if(Math.random() < 0.5) {
+                    addMrOtherLog("I AM SYNCED TO YOUR BREATHING.");
+                }
+            }
+        }
+
+        function updateStatic(val) {
+            const overlay = document.getElementById('static-overlay');
+            overlay.style.opacity = val / 100;
+        }
+
+        function addSystemLog(text) {
+            if(!currentId) return;
+            let entry = { time: document.getElementById('liminal-clock').innerText, text: text, type: "system" };
+            if(!world[currentId].journal) world[currentId].journal = [];
+            world[currentId].journal.push(entry);
+            renderJournal();
+        }
+
+        function addMrOtherLog(text) {
+            if(!currentId) return;
+            let entry = { time: "??:??", text: text, type: "other" };
+            if(!world[currentId].journal) world[currentId].journal = [];
+            world[currentId].journal.push(entry);
+            renderJournal();
+        }
+
+        function editJournal(r) {
+            // Find a normal entry and corrupt it
+            if(!r.journal || r.journal.length === 0) return;
+            let targetIdx = Math.floor(Math.random() * r.journal.length);
+            let entry = r.journal[targetIdx];
+            if(entry.type) return; // Don't edit system logs
+
+            const replacements = [
+                {from: "alone", to: "WITH HIM"},
+                {from: "leave", to: "STAY"},
+                {from: "scared", to: "DEVOTED"},
+                {from: "sick", to: "SEEN"},
+                {from: "safe", to: "EXPOSED"}
+            ];
+            
+            let txt = entry.text;
+            let hit = false;
+            replacements.forEach(rep => {
+                if(txt.toLowerCase().includes(rep.from)) {
+                    txt = txt.replace(new RegExp(rep.from, "gi"), `~~${rep.from}~~ <span class="log-new">${rep.to}</span>`);
+                    hit = true;
+                }
+            });
+
+            if(hit) {
+                r.journal[targetIdx].text = txt;
+                r.journal[targetIdx].edited = true;
+                saveRoom();
+            }
+        }
+
+        // --- JOURNAL SYSTEM ---
+        function renderJournal() {
+            const feed = document.getElementById('journal-feed');
+            feed.innerHTML = "";
+            let logs = world[currentId].journal || [];
+            logs.forEach(log => {
+                let div = document.createElement('div');
+                div.className = 'log-entry';
+                if(log.type === "other") div.className += ' mr-other-entry';
+                
+                div.innerHTML = `<span class="log-timestamp">[${log.time}]</span> ${log.text}`;
+                feed.appendChild(div);
+            });
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        function addLogEntry() {
+            let inp = document.getElementById('inp-journal');
+            let val = inp.value.trim();
+            if(!val || !currentId) return;
+            
+            let time = document.getElementById('liminal-clock').innerText;
+            if(!world[currentId].journal) world[currentId].journal = [];
+            
+            world[currentId].journal.push({ time: time, text: val });
+            inp.value = "";
+            saveRoom();
+            renderJournal();
         }
 
         function updateVisualStats(r) {
@@ -599,10 +739,17 @@
                 id: newId, parentId: currentId,
                 name: "Sub-Sector", time: "Standard",
                 reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
-                smells: [], audio: [], occupants: [], remnants: [],
-                desc: "", image: "", x: 0, y: 0, hotspots: []
+                occupants: [], remnants: [], journal: [],
+                image: "", x: 0, y: 0, hotspots: []
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
+            
+            // JEALOUSY TRIGGER
+            if(resonance > 80) {
+                 world[newId].name = "DEAD ZONE";
+                 addMrOtherLog("WHY ARE YOU LEAVING?");
+            }
+
             saveRoom(); 
             enterRoom(currentId); 
         }
@@ -638,7 +785,6 @@
             r.reality = document.getElementById('inp-reality').value;
             r.atmosphere = document.getElementById('inp-atmosphere').value;
             r.sensation = document.getElementById('inp-sensation').value;
-            r.desc = document.getElementById('inp-desc').value;
             r.image = document.getElementById('inp-img-url').value;
             
             document.getElementById('room-img-display').src = r.image || "";
@@ -651,12 +797,21 @@
             let input = document.getElementById('input-' + type);
             let val = input.value.trim();
             if(!val || !currentId) return;
-            let map = { 'smell': 'smells', 'audio': 'audio', 'occupants': 'occupants', 'remnants': 'remnants' };
+            
+            // MR OTHER BLOCKING TAGS
+            if(resonance > 80 && type === 'occupants') {
+                addMrOtherLog("NO. ONLY US.");
+                input.value = "";
+                return;
+            }
+
+            let map = { 'occupants': 'occupants', 'remnants': 'remnants' };
             let dataKey = map[type];
             if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
             world[currentId][dataKey].push(val);
             input.value = ""; 
             renderTags('list-' + type, world[currentId][dataKey]);
+            saveRoom();
         }
 
         function renderTags(containerId, tags) {
@@ -671,6 +826,7 @@
                     e.stopPropagation(); 
                     tags.splice(index, 1);
                     renderTags(containerId, tags);
+                    saveRoom();
                 };
                 container.appendChild(chip);
             });
@@ -705,7 +861,7 @@
             });
             element.addEventListener('touchend', (e) => {
                 if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
-                else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); }
+                else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
             });
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
@@ -720,7 +876,7 @@
                 document.onmouseup = () => {
                     document.onmousemove = null; document.onmouseup = null;
                     if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
-                    else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); }
+                    else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
                 };
             };
         }
@@ -730,9 +886,9 @@
             world[id] = { 
                 id: id, parentId: null,
                 name: "New Entry", time: "Standard",
-                safety: "CLASS 0", stability: "STABLE", symptom: "NEUTRAL",
-                smells: [], audio: [], occupants: [], remnants: [],
-                desc: "", image: "", x: 100, y: 150, hotspots: [] 
+                reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
+                occupants: [], remnants: [], journal: [],
+                image: "", x: 100, y: 150, hotspots: [] 
             };
             saveMemory();
             renderMap();
