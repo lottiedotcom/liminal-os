@@ -658,17 +658,16 @@
             currentId = id;
             let r = world[id];
             
-            if(!r.tunerSweetSpot) r.tunerSweetSpot = Math.floor(Math.random() * 100);
+            if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
-            // Set Tuner to 0 or 100 to start noisy
-            let randomStart = Math.random() > 0.5 ? 0 : 100;
-            document.getElementById('static-tuner').value = randomStart;
+            // slider starts exactly at the room's custom location
+            document.getElementById('static-tuner').value = r.tunerSweetSpot;
             
             updateResonance(r);
             checkMrOther(r);
             
-            // INITIAL VISUAL SETUP
-            updateStatic(randomStart);
+            // visually update signal based on the tuner's custom location
+            updateStatic(r.tunerSweetSpot);
 
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
@@ -698,34 +697,26 @@
         }
 
         function calculateDecay(r) {
-            if(!r.lastVisited) {
-                r.lastVisited = Date.now();
-                return 0;
-            }
+            if(!r.lastVisited) return 0;
             let diff = Date.now() - r.lastVisited;
-            // 6 hours for full decay (21,600,000 ms)
-            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
-            return decayPercent;
+            // Exact 6 hours window
+            let sixHours = 1000 * 60 * 60 * 6;
+            return Math.min(100, Math.floor((diff / sixHours) * 100));
         }
 
-        // --- NEW TUNING LOGIC WITH DECAY FLOOR ---
         function updateStatic(val) {
             if(!currentId) return;
             let r = world[currentId];
-            let sweetSpot = r.tunerSweetSpot || 50;
+            let sweetSpot = r.tunerSweetSpot;
             
-            // Calculate current decay (0.0 to 1.0)
             let decayFloor = calculateDecay(r) / 100;
-
-            // Calculate Distance from Sweet Spot
             let distance = Math.abs(val - sweetSpot);
             
-            // Map tuning distance
             let tuningOpacity = 0;
             if(distance < 5) tuningOpacity = 0;
             else tuningOpacity = Math.min(1, (distance - 5) / 40);
 
-            // THE FINAL OPACITY is the higher of the two
+            // opacity can't drop below the current decay level
             let finalOpacity = Math.max(tuningOpacity, decayFloor);
             currentStaticOpacity = finalOpacity; 
 
@@ -744,9 +735,6 @@
             if(finalOpacity < 0.1) {
                 btn.style.background = "var(--accent)";
                 btn.innerText = "STABILIZE REALITY";
-            } else if (decayFloor > 0.9) {
-                btn.style.background = "var(--danger)";
-                btn.innerText = "SIGNAL LOST - RE-ANCHORING...";
             } else {
                 btn.style.background = "#cbd5e0";
                 btn.innerText = "SIGNAL UNSTABLE";
@@ -888,12 +876,17 @@
 
         function createConnection() {
             let newId = "room_" + Date.now();
+            let randomSpot = Math.floor(Math.random() * 100);
             world[newId] = { 
-                id: newId, parentId: currentId, name: "Sub-Sector", time: "Standard",
+                id: newId, parentId: currentId,
+                name: "Sub-Sector", time: "Standard",
                 reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
-                occupants: [], remnants: [], journal: [], image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100)
+                occupants: [], remnants: [], journal: [],
+                image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), 
+                tunerSweetSpot: randomSpot 
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
+            
             saveRoom(); 
             enterRoom(currentId); 
         }
@@ -924,11 +917,11 @@
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
             
-            // RESET DECAY TIMER ONLY IF CLEAR
+            // stabilizing decay only resets if tuned near-perfectly
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
             } else {
-                addMrOtherLog("REALITY SHIFTING.");
+                addMrOtherLog("SIGNAL LOST.");
             }
 
             document.getElementById('room-img-display').src = r.image || "";
@@ -998,7 +991,12 @@
 
         function createSurfaceRoom() {
             let id = "entry_" + Date.now();
-            world[id] = { id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", occupants: [], remnants: [], journal: [], image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50 };
+            let randomSpot = Math.floor(Math.random() * 100);
+            world[id] = { 
+                id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", 
+                occupants: [], remnants: [], journal: [], image: "", x: 100, y: 150, hotspots: [], 
+                lastVisited: Date.now(), tunerSweetSpot: randomSpot 
+            };
             saveMemory(); renderMap();
         }
 
