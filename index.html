@@ -20,7 +20,7 @@
             --accent: #38b2ac;         /* Teal */
             --accent-fade: #e6fffa;    /* Light Teal */
             --border: #cbd5e0;
-            --danger: #e53e3e;         /* Red for Mr. Other */
+            --danger: #3d302f;         /* Red for Mr. Other */
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
@@ -245,18 +245,6 @@
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         .bowing-effect { transform: scale(1.05); }
-        .scan-ripple {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 0%, rgba(56, 178, 172, 0.8) 50%, transparent 100%);
-            opacity: 0; z-index: 50; pointer-events: none;
-        }
-        .ripple-anim { animation: scanDown 1.5s cubic-bezier(0.4, 0.0, 0.2, 1); }
-        @keyframes scanDown {
-            0% { top: -100%; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-        }
     </style>
 </head>
 <body onclick="trackInput()">
@@ -494,17 +482,6 @@
                 this.startAmbience(buffer, vol, 0.5);
             },
             
-            playPurge() {
-                if(!this.ctx) return;
-                const src = this.ctx.createBufferSource();
-                src.buffer = this.brownBuffer;
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
-                src.connect(this.masterFilter); src.connect(gain); gain.connect(this.ctx.destination);
-                src.start(); src.stop(this.ctx.currentTime + 1.0);
-            },
-            
             setVolume(level) {
                 if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
             }
@@ -515,12 +492,14 @@
             else { SystemAudio.resume(); }
         });
 
-        // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE ---
+        // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE (RESTORED) ---
         const VOCAB = {
+            // General
             subjects: ["THE STATIC", "IT", "WE", "A GHOST", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "THE PULSE"],
             verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS"],
             objects: ["YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "THE EXIT", "HOPE", "FEAR", "THE TRUTH", "A LIE", "THE BLOOD", "THE GLASS", "FOREVER", "US"],
             
+            // Specific Themes
             winter_nouns: ["THE BLIZZARD", "BLACK ICE", "THE FROST", "A SHIVER", "THE COLD", "WHITE NOISE"],
             winter_verbs: ["FREEZES", "NUMBS", "BITES", "SLOWS", "COVERS", "HIDES"],
             
@@ -539,6 +518,7 @@
 
         function generateSentence(context = "general") {
             let s, v, o;
+            
             if(context === "winter") {
                 s = VOCAB.winter_nouns[Math.floor(Math.random() * VOCAB.winter_nouns.length)];
                 v = VOCAB.winter_verbs[Math.floor(Math.random() * VOCAB.winter_verbs.length)];
@@ -564,7 +544,7 @@
                 let adj = VOCAB.isolation_adjs[Math.floor(Math.random() * VOCAB.isolation_adjs.length)];
                 return `${s} IS ${adj}`;
             }
-            else { 
+            else { // General
                 s = VOCAB.subjects[Math.floor(Math.random() * VOCAB.subjects.length)];
                 v = VOCAB.verbs[Math.floor(Math.random() * VOCAB.verbs.length)];
                 o = VOCAB.objects[Math.floor(Math.random() * VOCAB.objects.length)];
@@ -613,10 +593,12 @@
             triggerPossession() {
                 const input = document.getElementById('inp-journal');
                 if(input.disabled) return; 
+                
                 input.disabled = true;
                 input.value = "";
                 input.setAttribute('placeholder', "LISTENING...");
                 input.classList.add('possessed-input');
+                
                 let count = 0;
                 let interval = setInterval(() => {
                     if(count > 5) clearInterval(interval);
@@ -626,6 +608,7 @@
             },
             
             sanitize(text) {
+                // SENSORY BLEED
                 if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
                 if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
                 
@@ -637,12 +620,15 @@
             },
             
             analyzeAndReply(text) {
-                if (resonance < 15 && Math.random() > 0.2) return; 
+                if (resonance < 15 && Math.random() > 0.2) return; // Only speak if high resonance
+                
                 const input = text.toLowerCase();
                 let context = "general";
-                if (input.includes("scared") || input.includes("dark") || input.includes("run")) context = "fear";
-                else if (input.includes("room") || input.includes("where") || input.includes("door")) context = "location";
-                else if (input.includes("snow") || input.includes("cold") || input.includes("ice")) context = "winter";
+                
+                if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
+                else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
+                else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter")) context = "winter";
+                
                 setTimeout(() => { addMrOtherLog(generateSentence(context)); }, 2000 + Math.random() * 2000); 
             },
             
@@ -680,9 +666,39 @@
         let clickResetTimer = null;
         let currentStaticOpacity = 1.0;
 
+        // DICTIONARY DEFINITIONS (INTERPRETER) - FULL RESTORE
+        const LEXICON = {
+            "GROUNDED": "1:1 with baseline reality. Stable.",
+            "TRANSITIONAL": "A space of movement. Not a destination.",
+            "ARTIFICIAL": "Constructed reality. Too clean.",
+            "DORMANT": "Asleep. Waiting for an observer.",
+            "BUFFERED": "High latency. Air feels thick.",
+            "HOLLOW": "Visuals without substance. Empty.",
+            "STERILE": "Devoid of life. Clinical.",
+            "STAGNANT": "Air has not moved in decades.",
+            "HUMMING": "Low-frequency mechanical drone.",
+            "HAZY": "Soft focus. Dream logic.",
+            "SUBMERGED": "Sensation of being underwater.",
+            "NEUTRAL": "Baseline emotional state.",
+            "KENOPSIA": "Atmosphere of a place usually bustling, now abandoned.",
+            "ANEMOIA": "Nostalgia for a time you've never known.",
+            "MUTED": "Sensory dampening.",
+            "WATCHED": "The architecture is observing you.",
+            "JAMAIS VU": "Familiar place feels unrecognizable.",
+            "FLOATING": "Dissociation. Detachment.",
+            "Standard": "Baseline flow.",
+            "Stagnant": "Time stopped.",
+            "Glacial": "Time crawls heavily.",
+            "Rapid": "Time spins wildly.",
+            "Looping": "Recursive events.",
+            "Reverse": "Inverted flow.",
+            "Non-Linear": "Fatal error."
+        };
+
         function explainTerm(term) {
             const el = document.getElementById('interpreter-bar');
-            el.innerText = LEXICON[term] ? "> " + LEXICON[term] : "SCANNING...";
+            if(LEXICON[term]) el.innerText = "> " + LEXICON[term];
+            else el.innerText = "SCANNING...";
         }
 
         function loadMemory() {
@@ -700,7 +716,7 @@
             SystemAudio.init(); 
             if(SystemAudio.ctx) SystemAudio.ctx.resume();
             SystemAudio.playOSAmbience();
-            MrOtherAI.init(); // GHOST START
+            MrOtherAI.init(); 
             
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
@@ -865,13 +881,6 @@
             }
         }
 
-        function getDepth(id) {
-            let depth = 0;
-            let curr = world[id];
-            while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
-            return depth;
-        }
-
         function generateDistortedWelcome() {
             const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"];
             return phrases[Math.floor(Math.random() * phrases.length)];
@@ -993,6 +1002,13 @@
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
+        function getDepth(id) {
+            let depth = 0;
+            let curr = world[id];
+            while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
+            return depth;
+        }
+
         function addMrOtherLog(text) {
             if(!currentId) return;
             if(!world[currentId].journal) world[currentId].journal = [];
@@ -1053,16 +1069,21 @@
         }
 
         function closeEditor(btn) {
-            // DESPERATE ARCHITECT (GLITCH ON EXIT)
-            if(Math.random() > 0.7) {
-                btn.innerText = "STAY";
-                btn.classList.add("crumb-glitch");
-                setTimeout(() => {
-                    btn.innerText = "MAP";
-                    btn.classList.remove("crumb-glitch");
+            // SAFEGUARD: If glitch logic fails, still close.
+            try {
+                if(Math.random() > 0.7) {
+                    btn.innerText = "STAY";
+                    btn.classList.add("crumb-glitch");
+                    setTimeout(() => {
+                        // Force back to map regardless of errors
+                        btn.innerText = "MAP";
+                        btn.classList.remove("crumb-glitch");
+                        performClose();
+                    }, 500);
+                } else {
                     performClose();
-                }, 500);
-            } else {
+                }
+            } catch(e) {
                 performClose();
             }
         }
@@ -1093,7 +1114,7 @@
                 ripple.classList.remove('ripple-anim');
                 void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
-                SystemAudio.playPurge();
+                // Removed playPurge() here to eliminate snare sound
             } else { addMrOtherLog("SIGNAL LOST."); }
 
             document.getElementById('room-img-display').src = r.image || "";
@@ -1159,10 +1180,35 @@
 
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
-            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
-            element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) { isDragging = true; element.style.left = (e.touches[0].clientX - 40) + 'px'; element.style.top = (e.touches[0].clientY - 50) + 'px'; } });
-            element.addEventListener('touchend', () => { if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } });
             
+            // TOUCH SUPPORT (FIXED)
+            element.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                isDragging = false;
+            }, {passive: false});
+
+            element.addEventListener('touchmove', (e) => {
+                let x = e.touches[0].clientX;
+                let y = e.touches[0].clientY;
+                if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) {
+                    isDragging = true;
+                    // Visual update
+                    element.style.left = (x - 40) + 'px';
+                    element.style.top = (y - 50) + 'px';
+                }
+            }, {passive: false});
+
+            element.addEventListener('touchend', (e) => {
+                if (isDragging) {
+                    world[id].x = parseInt(element.style.left);
+                    world[id].y = parseInt(element.style.top);
+                    saveMemory();
+                } else {
+                    enterRoom(id);
+                }
+            });
+
             // MOUSE SUPPORT
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
