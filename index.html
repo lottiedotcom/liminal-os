@@ -113,20 +113,20 @@
             flex-grow: 1; position: relative; background: #000;
             border-bottom: 4px solid var(--accent); overflow: hidden;
         }
-        #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 1s ease; }
+        #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.2s ease; }
         
         /* STATIC OVERLAY */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 0; 
+            opacity: 1; /* Default to full static until tuned */
             pointer-events: none; 
             mix-blend-mode: screen; 
-            transition: opacity 0.5s;
+            transition: opacity 0.1s;
             z-index: 5;
         }
         
-        /* DECAY EFFECTS */
+        /* DECAY EFFECTS (Now controlled by JS opacity) */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         
@@ -285,7 +285,7 @@
             <div id="liminal-clock">00:00</div>
             
             <div id="static-tuner-container">
-                <input type="range" id="static-tuner" min="0" max="100" value="0" oninput="updateStatic(this.value)">
+                <input type="range" id="static-tuner" min="0" max="100" value="50" oninput="updateStatic(this.value)">
             </div>
         </div>
         <div id="editor-controls">
@@ -374,7 +374,7 @@
             </div>
 
             <div class="btn-row">
-                <button class="btn-primary" onclick="saveRoom()">UPDATE DATABASE</button>
+                <button class="btn-primary" id="btn-save" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
         </div>
@@ -401,7 +401,7 @@
                 time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
                 journal: [{time: "00:00", text: "System initialized."}], 
-                image: "", x: 150, y: 200, hotspots: [], lastVisited: Date.now()
+                image: "", x: 150, y: 200, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50
             }
         };
         let world = defaultWorld;
@@ -413,6 +413,7 @@
         let clickCount = 0;
         let clickResetTimer = null;
         let batteryLevel = 1.0;
+        let currentStaticOpacity = 1.0;
 
         // DICTIONARY DEFINITIONS (INTERPRETER)
         const LEXICON = {
@@ -595,7 +596,6 @@
             if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
             else modal.classList.add('hidden');
             
-            // Ensure menu is reset when opening
             document.getElementById('data-menu-buttons').classList.remove('hidden');
             document.getElementById('lexicon-view').classList.add('hidden');
         }
@@ -658,10 +658,21 @@
             currentId = id;
             let r = world[id];
             
+            if(!r.tunerSweetSpot) r.tunerSweetSpot = Math.floor(Math.random() * 100);
+
+            // Set Tuner to 0 or random distant value to FORCE tuning
+            let randomStart = Math.random() > 0.5 ? 0 : 100;
+            document.getElementById('static-tuner').value = randomStart;
+            
             updateResonance(r);
             checkMrOther(r);
+            
+            // Calculate DECAY (Time passed)
             let decay = calculateDecay(r);
-            applyDecayVisuals(r, decay);
+            
+            // INITIAL VISUAL SETUP
+            // We force updateStatic to calculate based on Sweet Spot
+            updateStatic(randomStart);
 
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
@@ -696,22 +707,49 @@
                 return 0;
             }
             let diff = Date.now() - r.lastVisited;
+            // 5 minutes for full decay
             let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 5)) * 100)); 
             return decayPercent;
         }
 
-        function applyDecayVisuals(r, decay) {
+        // --- NEW TUNING LOGIC ---
+        function updateStatic(val) {
+            if(!currentId) return;
+            let r = world[currentId];
+            let sweetSpot = r.tunerSweetSpot || 50;
+            
+            // Calculate Distance from Sweet Spot
+            let distance = Math.abs(val - sweetSpot);
+            
+            // Map distance (0-100) to Opacity (0.0 - 1.0)
+            // If distance is < 5, opacity is 0 (Clear)
+            // If distance is > 50, opacity is 1 (Full Static)
+            let opacity = 0;
+            if(distance < 5) opacity = 0;
+            else opacity = Math.min(1, (distance - 5) / 40);
+
+            currentStaticOpacity = opacity; // Global var to check later
+
+            const overlay = document.getElementById('static-overlay');
+            overlay.style.opacity = opacity;
+
+            // Apply Decay Filters only if static is present
             const img = document.getElementById('room-img-display');
-            const tuner = document.getElementById('static-tuner');
-            img.className = ""; 
-            if (decay > 20) {
-                if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.classList.add('decay-bright');
-                else img.classList.add('decay-dark');
-                tuner.value = decay; 
-                updateStatic(decay);
+            if(opacity > 0.2) {
+                 if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
+                 else img.className = 'decay-dark';
             } else {
-                tuner.value = 0;
-                updateStatic(0);
+                 img.className = ""; // Clear filters when tuned
+            }
+            
+            // Visual Feedback on Button
+            const btn = document.getElementById('btn-save');
+            if(opacity === 0) {
+                btn.style.background = "var(--accent)";
+                btn.innerText = "STABILIZE REALITY";
+            } else {
+                btn.style.background = "#cbd5e0";
+                btn.innerText = "SIGNAL UNSTABLE";
             }
         }
 
@@ -737,19 +775,11 @@
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            if(!img.classList.contains('decay-bright') && !img.classList.contains('decay-dark')) {
-                if(resonance > 50) img.classList.add('bowing-effect');
-                if(resonance > 90) img.classList.add('dark-mode');
-            }
+            // Only add visual warping if image is visible
+            if(resonance > 50) img.classList.add('bowing-effect');
         }
 
-        function updateStatic(val) {
-            const overlay = document.getElementById('static-overlay');
-            let opacity = (val / 100) * 0.8;
-            overlay.style.opacity = opacity;
-        }
-
-        // --- CHAOS GRAMMAR ENGINE (NO SCIENCE WORDS) ---
+        // --- CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
             subjects: [
                 "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
@@ -772,11 +802,10 @@
                 "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
             
-            // CONTEXT TRIGGERS (UPDATED)
+            // CONTEXT TRIGGERS
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
-            // Replaced Kelvin/Science words with poetic winter words
             winter_words: ["THE BLIZZARD", "THE NUMBNESS", "BLACK ICE", "THE WHITE", "DEEP WINTER", "THE FROST", "THE SHIVER"],
             love_words: ["THE BOND", "THE OBSESSION", "THE LOCK", "THE KEY", "THE VEIN"]
         };
@@ -900,7 +929,7 @@
                 name: "Sub-Sector", time: "Standard",
                 reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
                 occupants: [], remnants: [], journal: [],
-                image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now()
+                image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100)
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
             
@@ -934,16 +963,21 @@
         function saveRoom() {
             if(!currentId) return;
             let r = world[currentId];
+            
             r.name = document.getElementById('inp-name').value;
             r.time = document.getElementById('inp-time').value;
             r.reality = document.getElementById('inp-reality').value;
             r.atmosphere = document.getElementById('inp-atmosphere').value;
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
-            r.lastVisited = Date.now();
             
-            let decay = calculateDecay(r);
-            applyDecayVisuals(r, decay);
+            // Only stabilize decay if the image is clear (Opacity near 0)
+            if(currentStaticOpacity < 0.1) {
+                r.lastVisited = Date.now();
+            } else {
+                // If they save with bad signal, decay continues/doesn't reset
+                addMrOtherLog("SIGNAL LOST.");
+            }
 
             document.getElementById('room-img-display').src = r.image || "";
             updateVisualStats(r);
@@ -1045,7 +1079,7 @@
                 name: "New Entry", time: "Standard",
                 reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 occupants: [], remnants: [], journal: [],
-                image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now()
+                image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50
             };
             saveMemory();
             renderMap();
