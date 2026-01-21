@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v3.6';
+const CACHE_NAME = 'inbetween-v4.2'; // Forced audio update
 const ASSETS = [
   './',
   './index.html',
