@@ -125,6 +125,13 @@
             transition: opacity 0.1s;
             z-index: 5;
         }
+
+        /* TRANSITION SCREEN (BLACK VOID) */
+        #transition-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 99999; opacity: 0; pointer-events: none;
+            transition: opacity 0.2s;
+        }
         
         /* DECAY EFFECTS (Now controlled by JS opacity) */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
@@ -263,6 +270,7 @@
     </div>
 
     <div id="agitation-lock">QUIET.</div>
+    <div id="transition-screen"></div>
 
     <div id="map-view" class="hidden"></div>
 
@@ -409,7 +417,7 @@
             });
         }
 
-        // --- AUDIO ENGINE (DEEP AMBIENCE ONLY) ---
+        // --- AUDIO ENGINE (Deep & Clean, No High Pitch, No Click Noise) ---
         const SystemAudio = {
             ctx: null,
             ambienceSrc: null,
@@ -435,10 +443,10 @@
                 this.ambienceGain = this.ctx.createGain();
                 this.ambienceGain.gain.value = 0;
                 
-                // GLOBAL LOW-PASS: NO HIGH PITCHES
+                // GLOBAL FILTER: Cuts everything above 400Hz.
                 this.masterFilter = this.ctx.createBiquadFilter();
                 this.masterFilter.type = 'lowpass';
-                this.masterFilter.frequency.value = 400; // Cuts everything above muffled 400hz
+                this.masterFilter.frequency.value = 400; 
 
                 this.ambienceGain.connect(this.masterFilter);
                 this.masterFilter.connect(this.ctx.destination);
@@ -446,6 +454,10 @@
 
             resume() {
                 if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+            },
+            
+            suspend() {
+                if(this.ctx && this.ctx.state === 'running') this.ctx.suspend();
             },
 
             createNoiseBuffer(type) {
@@ -480,7 +492,7 @@
                 return buffer;
             },
 
-            startAmbience(buffer, volume) {
+            startAmbience(buffer, volume, fadeTime = 1.0) {
                 if(!this.ctx) return;
                 
                 if (this.ambienceSrc) {
@@ -495,16 +507,21 @@
                 this.ambienceSrc.start();
                 
                 const t = this.ctx.currentTime;
-                this.ambienceGain.gain.setTargetAtTime(volume, t, 0.5);
+                this.ambienceGain.gain.setTargetAtTime(volume, t, fadeTime);
+            },
+            
+            stopAll() {
+                if(!this.ctx) return;
+                const t = this.ctx.currentTime;
+                this.ambienceGain.gain.setTargetAtTime(0, t, 0.1);
+                setTimeout(() => { 
+                    if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; }
+                }, 200);
             },
 
             playOSAmbience() {
                 // OS = Deep Brown Noise
                 this.startAmbience(this.brownBuffer, 0.15); 
-            },
-
-            playRoomAmbience() {
-                this.updateRoomAmbience();
             },
 
             updateRoomAmbience() {
@@ -515,16 +532,14 @@
                 let buffer = this.pinkBuffer; 
                 let vol = 0.1; 
 
-                // Temporal Colors (Filtered)
                 if (mode === "Glacial") { buffer = this.brownBuffer; vol = 0.25; } 
                 if (mode === "Rapid") { buffer = this.whiteBuffer; vol = 0.08; } 
                 if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
                 
-                this.startAmbience(buffer, vol);
+                this.startAmbience(buffer, vol, 0.5);
             },
 
             playPurge() {
-                // RESET SOUND: Heavy Thud (Brown Noise)
                 if(!this.ctx) return;
                 const src = this.ctx.createBufferSource();
                 src.buffer = this.brownBuffer;
@@ -541,6 +556,15 @@
                 src.stop(this.ctx.currentTime + 1.0);
             }
         };
+
+        // HANDLE APP VISIBILITY
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                SystemAudio.suspend();
+            } else {
+                SystemAudio.resume();
+            }
+        });
 
         // APP LOGIC
         let defaultWorld = {
@@ -658,7 +682,7 @@
         }
 
         function trackInput() {
-            SystemAudio.resume(); // WAKE AUDIO
+            SystemAudio.resume(); 
             idleTimer = 0;
             clickCount++;
             if(!clickResetTimer) {
@@ -808,53 +832,67 @@
         }
 
         function enterRoom(id) {
-            currentId = id;
-            let r = world[id];
+            // STOP OS AUDIO IMMEDIATELY
+            SystemAudio.stopAll();
             
-            if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
+            // SHOW BLACK SCREEN TRANSITION
+            const ts = document.getElementById('transition-screen');
+            ts.style.opacity = "1";
+            ts.style.pointerEvents = "auto";
 
-            // AUDIO SWITCH
-            SystemAudio.playRoomAmbience();
+            // WAIT 1.2 SECONDS
+            setTimeout(() => {
+                currentId = id;
+                let r = world[id];
+                
+                if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
-            // Set Tuner to 0 or random distant value to FORCE tuning
-            let randomStart = Math.random() > 0.5 ? 0 : 100;
-            document.getElementById('static-tuner').value = randomStart;
-            
-            updateResonance(r);
-            checkMrOther(r);
-            
-            // Calculate DECAY (Time passed)
-            let decay = calculateDecay(r);
-            
-            // INITIAL VISUAL SETUP
-            // We force updateStatic to calculate based on Sweet Spot
-            updateStatic(randomStart);
+                // START ROOM AUDIO
+                SystemAudio.updateRoomAmbience();
 
-            document.getElementById('map-view').classList.add('hidden');
-            document.getElementById('room-editor-view').classList.remove('hidden');
-            renderBreadcrumbs(id);
-            
-            document.getElementById('inp-name').value = r.name;
-            document.getElementById('inp-time').value = r.time || "Standard";
-            document.getElementById('inp-reality').value = r.reality || "GROUNDED";
-            document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
-            document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
-            
-            updateVisualStats(r);
-            updateMood(r.sensation || "NEUTRAL");
-            startClock(); 
+                // Set Tuner to 0 or random distant value to FORCE tuning
+                let randomStart = Math.random() > 0.5 ? 0 : 100;
+                document.getElementById('static-tuner').value = randomStart;
+                
+                updateResonance(r);
+                checkMrOther(r);
+                
+                // Calculate DECAY (Time passed)
+                let decay = calculateDecay(r);
+                
+                // INITIAL VISUAL SETUP
+                updateStatic(randomStart);
 
-            document.getElementById('inp-img-url').value = r.image || "";
-            document.getElementById('room-img-display').src = r.image || "";
+                document.getElementById('map-view').classList.add('hidden');
+                document.getElementById('room-editor-view').classList.remove('hidden');
+                
+                // FADE OUT BLACK SCREEN
+                ts.style.opacity = "0";
+                ts.style.pointerEvents = "none";
 
-            renderTags('list-occupants', r.occupants || []);
-            renderTags('list-remnants', r.remnants || []);
-            document.getElementById('input-occupants').value = "";
-            document.getElementById('input-remnants').value = "";
-            
-            renderJournal();
-            renderHotspots();
-            explainTerm(r.reality);
+                renderBreadcrumbs(id);
+                document.getElementById('inp-name').value = r.name;
+                document.getElementById('inp-time').value = r.time || "Standard";
+                document.getElementById('inp-reality').value = r.reality || "GROUNDED";
+                document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
+                document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
+                
+                updateVisualStats(r);
+                updateMood(r.sensation || "NEUTRAL");
+                startClock(); 
+
+                document.getElementById('inp-img-url').value = r.image || "";
+                document.getElementById('room-img-display').src = r.image || "";
+
+                renderTags('list-occupants', r.occupants || []);
+                renderTags('list-remnants', r.remnants || []);
+                document.getElementById('input-occupants').value = "";
+                document.getElementById('input-remnants').value = "";
+                
+                renderJournal();
+                renderHotspots();
+                explainTerm(r.reality);
+            }, 1200);
         }
 
         function calculateDecay(r) {
@@ -874,31 +912,24 @@
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
             
-            // Calculate Distance from Sweet Spot
             let distance = Math.abs(val - sweetSpot);
-            
-            // Map distance (0-100) to Opacity (0.0 - 1.0)
-            // If distance is < 5, opacity is 0 (Clear)
-            // If distance is > 50, opacity is 1 (Full Static)
             let opacity = 0;
             if(distance < 5) opacity = 0;
             else opacity = Math.min(1, (distance - 5) / 40);
 
-            currentStaticOpacity = opacity; // Global var to check later
+            currentStaticOpacity = opacity;
 
             const overlay = document.getElementById('static-overlay');
             overlay.style.opacity = opacity;
 
-            // Apply Decay Filters only if static is present
             const img = document.getElementById('room-img-display');
             if(opacity > 0.2) {
                  if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
                  else img.className = 'decay-dark';
             } else {
-                 img.className = ""; // Clear filters when tuned
+                 img.className = "";
             }
             
-            // Visual Feedback on Button
             const btn = document.getElementById('btn-save');
             if(opacity === 0) {
                 btn.style.background = "var(--accent)";
@@ -931,7 +962,6 @@
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            // Only add visual warping if image is visible
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
@@ -957,8 +987,6 @@
                 "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED",
                 "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
-            
-            // CONTEXT TRIGGERS
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
@@ -1110,7 +1138,7 @@
 
         function closeEditor() {
             saveRoom();
-            // SWITCH AUDIO BACK TO OS
+            SystemAudio.stopAll();
             SystemAudio.playOSAmbience();
             if(clockInterval) clearInterval(clockInterval);
             document.getElementById('room-editor-view').classList.add('hidden');
@@ -1132,14 +1160,13 @@
             // Only stabilize decay if the image is clear (Opacity near 0)
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
-                // RIPPLE EFFECT + PURGE SOUND
+                // RIPPLE EFFECT & PURGE SOUND
                 let ripple = document.getElementById('scan-ripple');
                 ripple.classList.remove('ripple-anim');
-                void ripple.offsetWidth;
+                void ripple.offsetWidth; 
                 ripple.classList.add('ripple-anim');
-                SystemAudio.playPurge(); 
+                SystemAudio.playPurge();
             } else {
-                // If they save with bad signal, decay continues/doesn't reset
                 addMrOtherLog("SIGNAL LOST.");
             }
 
