@@ -1,5 +1,5 @@
-// VERSION v12 - The Cursed Update
-const CACHE_NAME = 'inbetween-v12';
+// VERSION v13 - Lexicon & Dictionary Fix
+const CACHE_NAME = 'inbetween-v13';
 const ASSETS = [
   './',
   './index.html',
