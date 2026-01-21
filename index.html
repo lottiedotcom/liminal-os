@@ -210,8 +210,9 @@
             backdrop-filter: blur(2px);
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
+        
+        .possessed-input { border-color: var(--danger) !important; color: var(--danger) !important; }
 
-        /* GHOST BOX / INTERPRETER */
         #interpreter-bar {
             font-family: var(--mono); font-size: 11px; color: var(--accent);
             text-transform: uppercase; margin-top: 8px; min-height: 14px;
@@ -422,70 +423,46 @@
             });
         }
 
-        // --- AUDIO ENGINE (ATMOSPHERE ONLY - NO CLICKS) ---
+        // --- AUDIO ENGINE ---
         const SystemAudio = {
             ctx: null,
             ambienceSrc: null,
             ambienceGain: null,
             masterFilter: null,
-            
-            // Buffers
-            pinkBuffer: null,
-            whiteBuffer: null,
-            brownBuffer: null,
+            pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
 
             init() {
                 if (this.ctx) return;
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
-                
-                // Create Noise Buffers
                 this.pinkBuffer = this.createNoiseBuffer('pink');
                 this.whiteBuffer = this.createNoiseBuffer('white');
                 this.brownBuffer = this.createNoiseBuffer('brown');
-
-                // Master Ambience Channel
                 this.ambienceGain = this.ctx.createGain();
                 this.ambienceGain.gain.value = 0;
-                
-                // GLOBAL FILTER: Cuts everything above 400Hz.
                 this.masterFilter = this.ctx.createBiquadFilter();
                 this.masterFilter.type = 'lowpass';
                 this.masterFilter.frequency.value = 400; 
-
                 this.ambienceGain.connect(this.masterFilter);
                 this.masterFilter.connect(this.ctx.destination);
             },
 
-            resume() {
-                if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-            },
-            
-            suspend() {
-                if(this.ctx && this.ctx.state === 'running') this.ctx.suspend();
-            },
+            resume() { if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+            suspend() { if(this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
 
             createNoiseBuffer(type) {
                 const bufferSize = 3 * this.ctx.sampleRate;
                 const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                 const output = buffer.getChannelData(0);
-                
-                if (type === 'white') {
-                    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
-                } else if (type === 'pink') {
+                if (type === 'white') { for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1; } 
+                else if (type === 'pink') {
                     let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
                     for (let i = 0; i < bufferSize; i++) {
                         let white = Math.random() * 2 - 1;
-                        b0 = 0.99886 * b0 + white * 0.0555179;
-                        b1 = 0.99332 * b1 + white * 0.0750759;
-                        b2 = 0.96900 * b2 + white * 0.1538520;
-                        b3 = 0.86650 * b3 + white * 0.3104856;
-                        b4 = 0.55000 * b4 + white * 0.5329522;
-                        b5 = -0.7616 * b5 - white * 0.0168980;
-                        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-                        output[i] *= 0.11;
+                        b0 = 0.99886 * b0 + white * 0.0555179; b1 = 0.99332 * b1 + white * 0.0750759; b2 = 0.96900 * b2 + white * 0.1538520; b3 = 0.86650 * b3 + white * 0.3104856; b4 = 0.55000 * b4 + white * 0.5329522; b5 = -0.7616 * b5 - white * 0.0168980;
+                        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
                     }
-                } else { // brown
+                } else { 
                     let lastOut = 0.0;
                     for (let i = 0; i < bufferSize; i++) {
                         let white = Math.random() * 2 - 1;
@@ -499,49 +476,48 @@
 
             startAmbience(buffer, volume, fadeTime = 1.0) {
                 if(!this.ctx) return;
-                
-                if (this.ambienceSrc) {
-                    this.ambienceSrc.stop();
-                    this.ambienceSrc.disconnect();
-                }
-
+                if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); }
                 this.ambienceSrc = this.ctx.createBufferSource();
                 this.ambienceSrc.buffer = buffer;
                 this.ambienceSrc.loop = true;
                 this.ambienceSrc.connect(this.ambienceGain);
                 this.ambienceSrc.start();
-                
-                const t = this.ctx.currentTime;
-                this.ambienceGain.gain.setTargetAtTime(volume, t, fadeTime);
+                this.ambienceGain.gain.setTargetAtTime(volume, this.ctx.currentTime, fadeTime);
             },
             
             stopAll() {
                 if(!this.ctx) return;
-                const t = this.ctx.currentTime;
-                this.ambienceGain.gain.setTargetAtTime(0, t, 0.1);
-                setTimeout(() => { 
-                    if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; }
-                }, 200);
+                this.ambienceGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+                setTimeout(() => { if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; } }, 200);
             },
 
-            playOSAmbience() {
-                // OS = Deep Brown Noise
-                this.startAmbience(this.brownBuffer, 0.15); 
-            },
+            playOSAmbience() { this.startAmbience(this.brownBuffer, 0.15); },
 
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
                 const r = world[currentId];
                 const mode = r.time || "Standard";
-                
-                let buffer = this.pinkBuffer; 
-                let vol = 0.1; 
-
+                let buffer = this.pinkBuffer; let vol = 0.1; 
                 if (mode === "Glacial") { buffer = this.brownBuffer; vol = 0.25; } 
                 if (mode === "Rapid") { buffer = this.whiteBuffer; vol = 0.08; } 
                 if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
-                
                 this.startAmbience(buffer, vol, 0.5);
+            },
+            
+            playPurge() {
+                // RIPPLE SOUND
+                if(!this.ctx) return;
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.brownBuffer;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
+                src.connect(this.masterFilter); src.connect(gain); gain.connect(this.ctx.destination);
+                src.start(); src.stop(this.ctx.currentTime + 1.0);
+            },
+            
+            setVolume(level) {
+                if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
             }
         };
 
@@ -550,6 +526,91 @@
             if (document.hidden) { SystemAudio.suspend(); } 
             else { SystemAudio.resume(); }
         });
+
+        // --- MR OTHER GHOST ENGINE ---
+        const MrOtherAI = {
+            batteryLevel: 1.0,
+            isFeeding: false,
+            
+            init() {
+                if(navigator.getBattery) {
+                    navigator.getBattery().then(batt => {
+                        this.batteryLevel = batt.level;
+                        batt.addEventListener('levelchange', () => { this.batteryLevel = batt.level; });
+                        batt.addEventListener('chargingchange', () => { 
+                            this.isFeeding = batt.charging;
+                            if(this.isFeeding) {
+                                addMrOtherLog("FEEDING...");
+                                resonance = Math.min(100, resonance + 20);
+                            }
+                        });
+                    });
+                }
+                
+                // 3:33 CHECKER
+                setInterval(() => {
+                    const now = new Date();
+                    if(now.getHours() % 12 === 3 && now.getMinutes() === 33) {
+                        this.triggerPossession();
+                    } else {
+                        const input = document.getElementById('inp-journal');
+                        if(input.disabled && input.getAttribute('placeholder') === "LISTENING...") {
+                            input.disabled = false;
+                            input.setAttribute('placeholder', "Enter log...");
+                            input.classList.remove('possessed-input');
+                        }
+                    }
+                }, 1000);
+            },
+            
+            triggerPossession() {
+                const input = document.getElementById('inp-journal');
+                if(input.disabled) return; // Already possessed
+                
+                input.disabled = true;
+                input.value = "";
+                input.setAttribute('placeholder', "LISTENING...");
+                input.classList.add('possessed-input');
+                
+                const thoughts = ["THE WALLS BREATHE", "DO NOT TURN AROUND", "SYNCING...", "WE SEE YOU"];
+                let count = 0;
+                let interval = setInterval(() => {
+                    if(count > 5) clearInterval(interval);
+                    addMrOtherLog(thoughts[Math.floor(Math.random() * thoughts.length)]);
+                    count++;
+                }, 3000);
+            },
+            
+            sanitize(text) {
+                // SENSORY BLEED
+                if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
+                if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
+                
+                // BATTERY GASLIGHT
+                if(this.batteryLevel < 0.2) {
+                    text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR");
+                }
+                if(this.batteryLevel < 0.5) {
+                    text = text.replace(/safe/gi, "TRAPPED").replace(/exit/gi, "WALL");
+                }
+                return text;
+            },
+            
+            vandalize(logIndex) {
+                // STRIKETHROUGH ATTACK
+                if(Math.random() > 0.3) return; // Chance to happen
+                
+                setTimeout(() => {
+                    const feed = document.getElementById('journal-feed');
+                    const entries = feed.getElementsByClassName('log-entry');
+                    if(entries.length > 0) {
+                        const target = entries[entries.length - 1]; // Last entry
+                        const originalText = target.innerHTML;
+                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">NO.</span>`;
+                    }
+                }, 3000);
+            }
+        };
 
         // APP LOGIC
         let defaultWorld = {
@@ -565,14 +626,11 @@
         let resonance = 0; 
         let currentId = null;
         let clockInterval = null;
-        
         let idleTimer = 0;
         let clickCount = 0;
         let clickResetTimer = null;
-        let batteryLevel = 1.0;
         let currentStaticOpacity = 1.0;
 
-        // DICTIONARY DEFINITIONS (INTERPRETER)
         const LEXICON = {
             "GROUNDED": "1:1 with baseline reality. Stable.",
             "TRANSITIONAL": "A space of movement. Not a destination.",
@@ -624,6 +682,7 @@
             SystemAudio.init(); 
             if(SystemAudio.ctx) SystemAudio.ctx.resume();
             SystemAudio.playOSAmbience();
+            MrOtherAI.init(); // START THE GHOST
             
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
@@ -632,18 +691,7 @@
             initMetaTriggers();
         }
 
-        // --- META TRIGGERS ---
         function initMetaTriggers() {
-            if(navigator.getBattery) {
-                navigator.getBattery().then(function(battery) {
-                    batteryLevel = battery.level;
-                    battery.addEventListener('levelchange', function() { batteryLevel = battery.level; });
-                    battery.addEventListener('chargingchange', function() {
-                        if(battery.charging) addMrOtherLog("FEEDING...");
-                    });
-                });
-            }
-
             setInterval(() => {
                 idleTimer++;
                 if(idleTimer > 60 && currentId) {
@@ -655,15 +703,6 @@
                     }
                 }
             }, 1000);
-
-            setInterval(() => {
-                let d = new Date();
-                if(d.getHours() === 3 && d.getMinutes() === 33) {
-                     document.body.style.filter = "invert(1)";
-                     setTimeout(() => { document.body.style.filter = "none"; }, 1000);
-                     if(Math.random() < 0.1) addMrOtherLog("THE VEIL IS THIN.");
-                }
-            }, 60000);
         }
 
         function trackInput() {
@@ -686,7 +725,6 @@
             setTimeout(() => { lock.style.display = "none"; }, 3000);
         }
 
-        // --- CLOCK & RENDER LOGIC ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             let glacialMinutes = 0;
@@ -827,14 +865,7 @@
         }
 
         function generateDistortedWelcome() {
-            const phrases = [
-                "W E L C O M E",
-                "w.e.l.c.o.m.e.",
-                "// WELCOME //",
-                "W-E-L-C-O-M-E",
-                "welcome.",
-                "> welcome_user"
-            ];
+            const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"];
             return phrases[Math.floor(Math.random() * phrases.length)];
         }
 
@@ -854,44 +885,27 @@
 
         function enterRoom(id) {
             SystemAudio.stopAll();
-            
-            // Generate Welcome Message
             const welcomeText = generateDistortedWelcome();
             document.getElementById('transition-text').innerText = welcomeText;
-
-            // BLACK SCREEN TRANSITION
             const ts = document.getElementById('transition-screen');
             ts.style.opacity = "1";
             ts.style.pointerEvents = "auto";
 
-            // Safeguard timeout to ensure screen doesn't stay black forever
             setTimeout(() => {
                 try {
                     currentId = id;
                     let r = world[id];
-                    
-                    if(!r) { // Error handling if room doesn't exist
-                        ts.style.opacity = "0";
-                        ts.style.pointerEvents = "none";
-                        return;
-                    }
-
+                    if(!r) { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; return; }
                     if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
-                    // RESET DECAY ON ENTRY
                     r.lastVisited = Date.now();
-                    
-                    // AUDIO SWITCH
                     SystemAudio.updateRoomAmbience();
-
-                    // Set Tuner to SWEET SPOT (Clear)
                     document.getElementById('static-tuner').value = r.tunerSweetSpot;
                     
                     updateResonance(r);
                     checkMrOther(r);
                     updateStatic(r.tunerSweetSpot);
 
-                    // DEPTH LOGIC
                     let depth = getDepth(id);
                     if (depth >= 3) {
                         document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
@@ -925,53 +939,31 @@
                     renderJournal();
                     renderHotspots();
                     explainTerm(r.reality);
-                } catch(e) {
-                    console.error("Loading Error:", e);
-                } finally {
-                    // Always remove black screen
-                    ts.style.opacity = "0";
-                    ts.style.pointerEvents = "none";
-                }
+                } catch(e) { console.error("Loading Error:", e); } 
+                finally { ts.style.opacity = "0"; ts.style.pointerEvents = "none"; }
             }, 1200);
         }
 
         function calculateDecay(r) {
-            if(!r.lastVisited) {
-                r.lastVisited = Date.now();
-                return 0;
-            }
+            if(!r.lastVisited) { r.lastVisited = Date.now(); return 0; }
             let diff = Date.now() - r.lastVisited;
-            // 6 hours for full decay
-            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
-            return decayPercent;
+            return Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
         }
 
-        // --- NEW TUNING LOGIC ---
         function updateStatic(val) {
             if(!currentId) return;
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
-            
-            let decayFloor = calculateDecay(r) / 100;
             let distance = Math.abs(val - sweetSpot);
-            
-            let opacity = 0;
-            if(distance < 5) opacity = 0;
-            else opacity = Math.min(1, (distance - 5) / 40);
-
-            let finalOpacity = Math.max(opacity, decayFloor);
+            let opacity = distance < 5 ? 0 : Math.min(1, (distance - 5) / 40);
+            let finalOpacity = Math.max(opacity, calculateDecay(r) / 100);
             currentStaticOpacity = finalOpacity; 
 
-            const overlay = document.getElementById('static-overlay');
-            overlay.style.opacity = finalOpacity;
-
+            document.getElementById('static-overlay').style.opacity = finalOpacity;
             const img = document.getElementById('room-img-display');
             if(finalOpacity > 0.2) {
-                 if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
-                 else img.className = 'decay-dark';
-            } else {
-                 img.className = "";
-            }
+                 img.className = ["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere) ? 'decay-bright' : 'decay-dark';
+            } else { img.className = ""; }
             
             const btn = document.getElementById('btn-save');
             if(finalOpacity < 0.1) {
@@ -983,130 +975,43 @@
             }
         }
 
-        // --- INTELLIGENT MR OTHER LOGIC ---
         function updateResonance(r) {
-            let multiplier = 1.0;
-            let h = new Date().getHours();
-            if(h >= 0 && h < 4) multiplier *= 2;
-            if(h >= 8 && h < 18) multiplier *= 0.5; 
-            if(batteryLevel < 0.2) multiplier *= 2;
-
-            if (r.reality === "GROUNDED" && resonance > 0) resonance -= 0.5;
-            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += (2.0 * multiplier); 
-            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += (3.0 * multiplier); 
-            
-            let items = (r.remnants || []).join(" ").toLowerCase();
-            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += (5.0 * multiplier);
-
-            if (resonance > 100) resonance = 100;
-            if (resonance < 0) resonance = 0;
+            if (["HOLLOW", "WATCHED"].includes(r.reality) || ["KENOPSIA"].includes(r.sensation)) resonance += 5;
+            else resonance = Math.max(0, resonance - 2);
             saveMemory();
         }
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            // Only add visual warping if image is visible
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
-        // --- CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
-            subjects: [
-                "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
-                "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "MY HEART", "THE PULSE"
-            ],
-            verbs: [
-                "CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES",
-                "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES",
-                "CRAVES", "KEEPS", "LOCKS", "WORSHIPS", "SYNCS", "ROTATES", "BLEEDS", "FREEZES"
-            ],
-            objects: [
-                "YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "YOUR SKIN", "YOUR EYES", "YOUR VOICE",
-                "THE EXIT", "THE ENTRY", "HOPE", "FEAR", "PAIN", "JOY", "THE TRUTH", "A LIE",
-                "THE BLOOD", "THE GLASS", "THE ICE", "THE SHRINE", "THE ALTAR", "FOREVER", "US"
-            ],
-            adjectives: [
-                "HOLLOW", "INFINITE", "EMPTY", "WRONG", "TRANSITIONAL", "STUCK", "LOST", "LIMINAL",
-                "NUMB", "FROZEN", "PALE", "BLUE", "SHIVERING", "CRYSTALLINE", "BRITTLE",
-                "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED",
-                "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
-            ],
-            
-            // CONTEXT TRIGGERS
-            fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
-            location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
-            self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
-            winter_words: ["THE BLIZZARD", "THE NUMBNESS", "BLACK ICE", "THE WHITE", "DEEP WINTER", "THE FROST", "THE SHIVER"],
-            love_words: ["THE BOND", "THE OBSESSION", "THE LOCK", "THE KEY", "THE VEIN"]
+            subjects: ["THE STATIC", "IT", "WE", "MR. OTHER", "THE ROOM"],
+            verbs: ["CONSUMES", "WATCHES", "MIMICS", "KNOWS", "SEES"],
+            objects: ["YOU", "YOUR FACE", "YOUR BREATH", "THE TRUTH", "FOREVER"]
         };
-
-        function generateSentence(context) {
-            const structure = Math.floor(Math.random() * 3);
-            let s = "", v = "", o = "";
-
-            if (context === "fear") s = getRandom(VOCAB.fear_words);
-            else if (context === "location") s = getRandom(VOCAB.location_words);
-            else if (context === "self") s = getRandom(VOCAB.self_words);
-            else if (context === "winter") s = getRandom(VOCAB.winter_words);
-            else if (context === "love") s = getRandom(VOCAB.love_words);
-            else s = getRandom(VOCAB.subjects);
-
-            v = getRandom(VOCAB.verbs);
-            o = getRandom(VOCAB.objects);
-            const adj = getRandom(VOCAB.adjectives);
-
-            if (structure === 0) return `${s} ${v} ${o}.`; 
-            else if (structure === 1) return `${o} IS ${adj}.`; 
-            else return `${v} ${o}... ${adj}.`; 
+        function generateSentence() {
+            let s = Math.random() > 0.5 ? VOCAB.subjects[0] : VOCAB.subjects[1];
+            return s + " " + VOCAB.verbs[0] + " " + VOCAB.objects[0]; 
         }
-
-        function getRandom(arr) {
-            return arr[Math.floor(Math.random() * arr.length)];
-        }
-
         function analyzeJournalInput(text) {
             if (resonance < 15) return; 
-            if (Math.random() > 0.85) return; 
-
-            const input = text.toLowerCase();
-            let context = "neutral";
-            
-            if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
-            else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
-            else if (input.includes("i am") || input.includes("me") || input.includes("my") || input.includes("face")) context = "self";
-            else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter") || input.includes("white")) context = "winter";
-            else if (input.includes("love") || input.includes("hate") || input.includes("why") || input.includes("stay")) context = "love";
-
-            let reply = generateSentence(context);
-
-            if (Math.random() < 0.15) {
-                const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN.", "FOREVER.", "JUST US."];
-                reply = glitches[Math.floor(Math.random() * glitches.length)];
-            }
-
-            setTimeout(() => {
-                addMrOtherLog(reply);
-            }, 2000 + Math.random() * 2000); 
+            setTimeout(() => { addMrOtherLog(generateSentence()); }, 2000); 
         }
-
         function addMrOtherLog(text) {
             if(!currentId) return;
-            let entry = { time: "??:??", text: text, type: "other" };
             if(!world[currentId].journal) world[currentId].journal = [];
-            world[currentId].journal.push(entry);
+            world[currentId].journal.push({ time: "??:??", text: text, type: "other" });
             renderJournal();
         }
 
-        // --- JOURNAL SYSTEM ---
         function renderJournal() {
             const feed = document.getElementById('journal-feed');
             feed.innerHTML = "";
-            let logs = world[currentId].journal || [];
-            logs.forEach(log => {
+            (world[currentId].journal || []).forEach(log => {
                 let div = document.createElement('div');
-                div.className = 'log-entry';
-                if(log.type === "other") div.className += ' mr-other-entry';
-                
+                div.className = 'log-entry' + (log.type === "other" ? ' mr-other-entry' : '');
                 div.innerHTML = `<span class="log-timestamp">[${log.time}]</span> ${log.text}`;
                 feed.appendChild(div);
             });
@@ -1118,11 +1023,14 @@
             let val = inp.value.trim();
             if(!val || !currentId) return;
             
+            // MR OTHER SANITIZATION
+            val = MrOtherAI.sanitize(val);
+            
             let time = document.getElementById('liminal-clock').innerText;
             if(!world[currentId].journal) world[currentId].journal = [];
-            
             world[currentId].journal.push({ time: time, text: val });
             
+            MrOtherAI.vandalize();
             analyzeJournalInput(val);
 
             inp.value = "";
@@ -1130,61 +1038,34 @@
             renderJournal();
         }
 
-        function updateVisualStats(r) {
-            let rea = r.reality || "GROUNDED";
-            let atm = r.atmosphere || "STERILE";
-            let sen = r.sensation || "NEUTRAL";
-            document.getElementById('room-stats').innerText = `${rea} | ${atm} | ${sen}`;
-        }
-
+        function updateVisualStats(r) { document.getElementById('room-stats').innerText = `${r.reality} | ${r.atmosphere} | ${r.sensation}`; }
         function updateMood(sensation) {
             const editor = document.getElementById('room-editor-view');
-            let gradient = "";
-            switch(sensation) {
-                case "KENOPSIA": gradient = "linear-gradient(180deg, #e4e7ec 0%, #d0d6e8 100%)"; break;
-                case "ANEMOIA": gradient = "linear-gradient(180deg, #fffcf0 0%, #f8ecc2 100%)"; break;
-                case "MUTED": gradient = "linear-gradient(180deg, #e2e8f0 0%, #cbd5e0 100%)"; break;
-                case "WATCHED": gradient = "linear-gradient(180deg, #e6e6e6 0%, #dcbdbd 100%)"; break;
-                case "JAMAIS VU": gradient = "linear-gradient(180deg, #fdffed 0%, #e8f5e9 100%)"; break;
-                case "FLOATING": gradient = "linear-gradient(180deg, #f8faff 0%, #eaddff 100%)"; break;
-                default: gradient = "linear-gradient(180deg, #f0f8ff 0%, #ffffff 100%)";
-            }
-            editor.style.background = gradient;
+            editor.style.background = sensation === "KENOPSIA" ? "linear-gradient(180deg, #e4e7ec 0%, #d0d6e8 100%)" : "linear-gradient(180deg, #f0f8ff 0%, #ffffff 100%)";
         }
 
         function createConnection() {
             let newId = "room_" + Date.now();
             world[newId] = { 
                 id: newId, parentId: currentId,
-                name: "Sub-Sector", time: "Standard",
-                reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
-                occupants: [], remnants: [], journal: [],
-                image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100)
+                name: "Sub-Sector", time: "Standard", reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
+                occupants: [], remnants: [], journal: [], image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: Math.floor(Math.random()*100)
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
-            
-            saveRoom(); 
-            enterRoom(currentId); 
+            saveRoom(); enterRoom(currentId); 
         }
 
         function renderBreadcrumbs(id) {
-            let path = [];
-            let curr = world[id];
-            while(curr) {
-                path.unshift({id: curr.id, name: curr.name});
-                if(curr.parentId) curr = world[curr.parentId];
-                else curr = null;
-            }
+            let path = []; let curr = world[id];
+            while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; }
             let nav = document.getElementById('nav-bar');
             nav.innerHTML = `<span class="crumb" onclick="closeEditor()">MAP</span>`;
-            path.forEach(node => {
-                nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`;
-            });
+            path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; });
         }
 
         function closeEditor() {
             saveRoom();
-            // SWITCH AUDIO BACK TO OS
+            SystemAudio.stopAll();
             SystemAudio.playOSAmbience();
             if(clockInterval) clearInterval(clockInterval);
             document.getElementById('room-editor-view').classList.add('hidden');
@@ -1195,7 +1076,6 @@
         function saveRoom() {
             if(!currentId) return;
             let r = world[currentId];
-            
             r.name = document.getElementById('inp-name').value;
             r.time = document.getElementById('inp-time').value;
             r.reality = document.getElementById('inp-reality').value;
@@ -1203,78 +1083,35 @@
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
             
-            // Only stabilize decay if the image is clear (Opacity near 0)
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
-                // RIPPLE EFFECT ONLY (NO SOUND)
                 let ripple = document.getElementById('scan-ripple');
                 ripple.classList.remove('ripple-anim');
-                void ripple.offsetWidth; 
+                void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
-            } else {
-                addMrOtherLog("SIGNAL LOST.");
-            }
+                SystemAudio.playPurge();
+            } else { addMrOtherLog("SIGNAL LOST."); }
 
             document.getElementById('room-img-display').src = r.image || "";
-            updateVisualStats(r);
-            updateMood(r.sensation);
-            saveMemory();
+            updateVisualStats(r); updateMood(r.sensation); saveMemory();
         }
 
         function addTag(type) {
-            let input = document.getElementById('input-' + type);
-            let val = input.value.trim();
-            if(!val || !currentId) return;
-            
-            if(resonance > 90 && type === 'occupants') {
-                addMrOtherLog("NO. ONLY US.");
-                input.value = "";
-                return;
-            }
-
-            let map = { 'occupants': 'occupants', 'remnants': 'remnants' };
-            let dataKey = map[type];
-            if(!world[currentId][dataKey]) world[currentId][dataKey] = [];
-            world[currentId][dataKey].push(val);
-            input.value = ""; 
-            renderTags('list-' + type, world[currentId][dataKey]);
-            saveRoom();
+            let input = document.getElementById('input-' + type); let val = input.value.trim(); if(!val || !currentId) return;
+            if(resonance > 90 && type === 'occupants') { addMrOtherLog("NO. ONLY US."); input.value = ""; return; }
+            if(!world[currentId][type]) world[currentId][type] = [];
+            world[currentId][type].push(val); input.value = ""; 
+            renderTags('list-' + type, world[currentId][type]); saveRoom();
         }
 
-        function renderTags(containerId, tags) {
-            let container = document.getElementById(containerId);
-            container.innerHTML = "";
-            if(!tags) return;
-            tags.forEach((tag, index) => {
-                let chip = document.createElement('div');
-                chip.className = 'tag-chip';
-                chip.innerHTML = `${tag} <span class="tag-close">x</span>`;
-                chip.querySelector('.tag-close').onclick = (e) => {
-                    e.stopPropagation(); 
-                    tags.splice(index, 1);
-                    renderTags(containerId, tags);
-                    saveRoom();
-                };
-                container.appendChild(chip);
-            });
-        }
+        function renderTags(id, tags) { document.getElementById(id).innerHTML = (tags || []).map(t => `<div class="tag-chip">${t} <span class="tag-close" onclick="this.parentElement.remove()">x</span></div>`).join(''); }
 
         function renderHotspots() {
-            let layer = document.getElementById('hotspot-layer');
-            layer.innerHTML = "";
-            let r = world[currentId];
-            if(!r.hotspots) r.hotspots = [];
-            r.hotspots.forEach((h, idx) => {
-                let box = document.createElement('div');
-                box.className = 'hotspot';
-                box.style.left = h.x + '%'; box.style.top = h.y + '%';
-                box.innerHTML = "↗"; 
-                setupHotspotDrag(box, idx);
-                layer.appendChild(box);
-            });
+            const layer = document.getElementById('hotspot-layer');
+            layer.innerHTML = (world[currentId].hotspots || []).map(h => `<div class="hotspot" style="left:${h.x}%; top:${h.y}%" onclick="enterRoom('${h.target}')">↗</div>`).join('');
         }
 
-        function setupHotspotDrag(element, index) {
+        function setupHotspotDrag(element, index) { 
             let startX, startY, isDragging = false;
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; });
             element.addEventListener('touchmove', (e) => {
@@ -1289,75 +1126,27 @@
             element.addEventListener('touchend', (e) => {
                 if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
                 else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
-            });
-            element.onmousedown = (e) => {
-                startX = e.clientX; isDragging = false;
-                document.onmousemove = (ev) => {
-                    if(Math.abs(ev.clientX - startX) > 5) {
-                        isDragging = true;
-                        let rect = element.parentElement.getBoundingClientRect();
-                        element.style.left = ((ev.clientX - rect.left) / rect.width * 100) + '%';
-                        element.style.top = ((ev.clientY - rect.top) / rect.height * 100) + '%';
-                    }
-                };
-                document.onmouseup = () => {
-                    document.onmousemove = null; document.onmouseup = null;
-                    if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
-                    else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
-                };
-            };
+            }); 
         }
 
         function createSurfaceRoom() {
             let id = "entry_" + Date.now();
             let randomSpot = Math.floor(Math.random() * 100);
-            world[id] = { 
-                id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
-                occupants: [], remnants: [], journal: [],
-                image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: randomSpot
-            };
-            saveMemory();
-            renderMap();
+            world[id] = { id: id, parentId: null, name: "New Entry", time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL", occupants: [], remnants: [], journal: [], image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: randomSpot };
+            saveMemory(); renderMap();
         }
 
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
-            element.addEventListener('touchmove', (e) => {
-                 if(Math.abs(e.touches[0].clientX - startX) > 5) {
-                     isDragging = true;
-                     element.style.left = (e.touches[0].clientX - 40) + 'px';
-                     element.style.top = (e.touches[0].clientY - 50) + 'px';
-                 }
-            });
-            element.addEventListener('touchend', () => {
-                if(!isDragging) enterRoom(id);
-                else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
-            });
-            element.onmousedown = (e) => {
-                startX = e.clientX; isDragging = false;
-                document.onmousemove = (ev) => {
-                    if(Math.abs(ev.clientX - startX) > 5) {
-                        isDragging = true;
-                        element.style.left = (ev.clientX - 40) + 'px';
-                        element.style.top = (ev.clientY - 50) + 'px';
-                    }
-                };
-                document.onmouseup = () => {
-                    document.onmousemove = null; document.onmouseup = null;
-                    if(!isDragging) enterRoom(id);
-                    else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
-                };
-            };
+            element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) isDragging = true; });
+            element.addEventListener('touchend', () => { if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } });
         }
 
         document.getElementById('inp-file').addEventListener('change', function() {
             if(this.files && this.files[0]) {
                 let reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('inp-img-url').value = e.target.result;
-                    document.getElementById('room-img-display').src = e.target.result;
-                };
+                reader.onload = (e) => { document.getElementById('inp-img-url').value = e.target.result; document.getElementById('room-img-display').src = e.target.result; };
                 reader.readAsDataURL(this.files[0]);
             }
         });
