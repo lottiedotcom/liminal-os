@@ -1,5 +1,5 @@
-// VERSION v10 - Fast & Smart Update
-const CACHE_NAME = 'inbetween-v10';
+// VERSION v11 - Decay & Obsession Update
+const CACHE_NAME = 'inbetween-v11';
 const ASSETS = [
   './',
   './index.html',
