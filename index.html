@@ -9,27 +9,36 @@
     <meta name="theme-color" content="#f0f8ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Inbetween">
     <link rel="apple-touch-icon" href="icon.png">
 
     <style>
+        /* --- 1. CLINICAL LIMINAL THEME --- */
         :root {
-            --bg: #f0f8ff; --text: #2d3748; --accent: #38b2ac; 
-            --accent-fade: #e6fffa; --border: #cbd5e0; --danger: #e53e3e;
+            --bg: #f0f8ff;             /* Alice Blue */
+            --text: #2d3748;           /* Slate */
+            --accent: #38b2ac;         /* Teal */
+            --accent-fade: #e6fffa;    /* Light Teal */
+            --border: #cbd5e0;
+            --danger: #e53e3e;         /* Red for Mr. Other */
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
+
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; touch-action: none; }
         .hidden { display: none !important; }
 
+        /* --- 2. BOOT SCREEN --- */
         #boot-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 10001;
+            background: #fff; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             letter-spacing: 2px; cursor: pointer;
         }
         .pulse { animation: pulse 3s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; letter-spacing: 3px;}
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
+        /* --- 3. MAP VIEW --- */
         #map-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(180deg, #d4fcff 0%, #ffffff 80%);
@@ -51,19 +60,20 @@
             cursor: pointer; letter-spacing: 1px;
         }
 
+        /* DATA MODAL */
         #data-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.98); z-index: 20000;
+            background: rgba(255,255,255,0.95); z-index: 200;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 15px;
         }
         .data-btn {
-            width: 250px; padding: 15px; background: #fff; border: 1px solid var(--border);
+            width: 200px; padding: 15px; background: #fff; border: 1px solid var(--border);
             color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
             font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            margin-bottom: 5px;
         }
 
+        /* Map Icons */
         .map-icon {
             width: 80px; height: 100px; position: absolute;
             display: flex; flex-direction: column; align-items: center;
@@ -80,9 +90,11 @@
             padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase; letter-spacing: 1px;
         }
 
+        /* --- 4. EDITOR VIEW --- */
         #room-editor-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 20; display: flex; flex-direction: column;
+            background: #fff; 
+            z-index: 20; display: flex; flex-direction: column;
             transition: background 1.5s ease-in-out;
         }
 
@@ -96,22 +108,32 @@
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
 
+        /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
             border-bottom: 4px solid var(--accent); overflow: hidden;
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.2s ease; }
         
+        /* STATIC OVERLAY */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 1; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.1s; z-index: 5;
+            opacity: 1; /* Default to full static until tuned */
+            pointer-events: none; 
+            mix-blend-mode: screen; 
+            transition: opacity 0.1s;
+            z-index: 5;
         }
         
+        /* DECAY EFFECTS (Now controlled by JS opacity) */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
+        
+        /* MR OTHER EFFECTS */
         .bowing-effect { transform: scale(1.05); }
 
+        /* AGITATION LOCK (Panic Screen) */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -119,6 +141,7 @@
             font-weight: bold; letter-spacing: 5px; color: var(--text);
         }
 
+        /* STATIC TUNER */
         #static-tuner-container {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             width: 60%; display: flex; align-items: center; gap: 10px;
@@ -132,32 +155,40 @@
             position: absolute; top: 15px; left: 15px; 
             background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; 
             font-size: 9px; font-weight: bold; color: var(--text);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 90%; text-transform: uppercase;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 90%; text-transform: uppercase;
         }
 
         #liminal-clock {
             position: absolute; top: 15px; right: 15px;
             background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 4px;
             font-family: var(--mono); font-size: 12px; font-weight: bold; color: var(--text);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); letter-spacing: 1px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            letter-spacing: 1px;
         }
 
         #editor-controls {
-            height: 55%; background: transparent; padding: 20px;
+            height: 55%; 
+            background: transparent; 
+            padding: 20px;
             display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
         input[type="text"], textarea, select {
-            background: rgba(255,255,255,0.8); border: 1px solid var(--border); padding: 8px;
+            background: rgba(255,255,255,0.8); 
+            border: 1px solid var(--border); padding: 8px;
             border-radius: 4px; font-family: inherit; color: var(--text); font-size: 12px;
-            width: 100%; box-sizing: border-box; backdrop-filter: blur(2px);
+            width: 100%; box-sizing: border-box;
+            backdrop-filter: blur(2px);
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
+        /* GHOST BOX / INTERPRETER (IMPROVED VISIBILITY) */
         #interpreter-bar {
             font-family: var(--mono); font-size: 11px; color: var(--accent);
             text-transform: uppercase; margin-top: 8px; min-height: 14px;
@@ -166,9 +197,11 @@
             border-left: 3px solid var(--accent);
         }
 
+        /* LIVING JOURNAL */
         #journal-container {
             background: rgba(255,255,255,0.5); border: 1px solid var(--border);
-            border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; height: 150px;
+            border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;
+            height: 150px;
         }
         #journal-feed {
             flex-grow: 1; overflow-y: auto; padding: 10px; 
@@ -180,11 +213,16 @@
         .log-edited { text-decoration: line-through; opacity: 0.6; }
         .log-new { font-weight: bold; color: var(--danger); }
 
-        #journal-input-area { display: flex; border-top: 1px solid var(--border); }
+        #journal-input-area {
+            display: flex; border-top: 1px solid var(--border);
+        }
         #inp-journal { border: none; background: #fff; border-radius: 0; }
         #btn-journal { border: none; background: var(--text); color: #fff; width: 50px; cursor: pointer; font-weight: bold; }
 
-        .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+        /* DIAGNOSTICS GRID */
+        .diag-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
+        }
         .diag-grid select { font-size: 10px; padding: 6px; }
 
         .tag-wrapper { display: flex; gap: 5px; }
@@ -377,6 +415,7 @@
         let batteryLevel = 1.0;
         let currentStaticOpacity = 1.0;
 
+        // DICTIONARY DEFINITIONS (INTERPRETER)
         const LEXICON = {
             "GROUNDED": "1:1 with baseline reality. Stable.",
             "TRANSITIONAL": "A space of movement. Not a destination.",
@@ -432,6 +471,7 @@
             initMetaTriggers();
         }
 
+        // --- META TRIGGERS ---
         function initMetaTriggers() {
             if(navigator.getBattery) {
                 navigator.getBattery().then(function(battery) {
@@ -484,6 +524,7 @@
             setTimeout(() => { lock.style.display = "none"; }, 3000);
         }
 
+        // --- CLOCK & RENDER LOGIC ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             let glacialMinutes = 0;
@@ -619,13 +660,18 @@
             
             if(!r.tunerSweetSpot) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
+            // Set Tuner to 0 or random distant value to FORCE tuning
             let randomStart = Math.random() > 0.5 ? 0 : 100;
             document.getElementById('static-tuner').value = randomStart;
             
             updateResonance(r);
             checkMrOther(r);
             
+            // Calculate DECAY (Time passed)
             let decay = calculateDecay(r);
+            
+            // INITIAL VISUAL SETUP
+            // We force updateStatic to calculate based on Sweet Spot
             updateStatic(randomStart);
 
             document.getElementById('map-view').classList.add('hidden');
@@ -661,37 +707,42 @@
                 return 0;
             }
             let diff = Date.now() - r.lastVisited;
-            // CHANGE: 4 Hours for full decay (14,400,000 ms) instead of 5 mins
-            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 4)) * 100)); 
+            // CHANGED: 6 Hours for full decay (fits the 4-8 hour request)
+            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 60 * 6)) * 100)); 
             return decayPercent;
         }
 
+        // --- NEW TUNING LOGIC ---
         function updateStatic(val) {
             if(!currentId) return;
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
             
+            // Calculate Distance from Sweet Spot
             let distance = Math.abs(val - sweetSpot);
             
+            // Map distance (0-100) to Opacity (0.0 - 1.0)
+            // If distance is < 5, opacity is 0 (Clear)
+            // If distance is > 50, opacity is 1 (Full Static)
             let opacity = 0;
             if(distance < 5) opacity = 0;
             else opacity = Math.min(1, (distance - 5) / 40);
 
-            currentStaticOpacity = opacity;
+            currentStaticOpacity = opacity; // Global var to check later
 
             const overlay = document.getElementById('static-overlay');
             overlay.style.opacity = opacity;
 
+            // Apply Decay Filters only if static is present
             const img = document.getElementById('room-img-display');
-            let currentDecay = calculateDecay(r);
-            
-            if(opacity > 0.2 || currentDecay > 25) {
+            if(opacity > 0.2) {
                  if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
                  else img.className = 'decay-dark';
             } else {
-                 img.className = ""; 
+                 img.className = ""; // Clear filters when tuned
             }
             
+            // Visual Feedback on Button
             const btn = document.getElementById('btn-save');
             if(opacity === 0) {
                 btn.style.background = "var(--accent)";
@@ -702,6 +753,7 @@
             }
         }
 
+        // --- INTELLIGENT MR OTHER LOGIC ---
         function updateResonance(r) {
             let multiplier = 1.0;
             let h = new Date().getHours();
@@ -723,9 +775,11 @@
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
+            // Only add visual warping if image is visible
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
+        // --- CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
             subjects: [
                 "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
@@ -748,6 +802,7 @@
                 "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
             
+            // CONTEXT TRIGGERS
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
@@ -812,6 +867,7 @@
             renderJournal();
         }
 
+        // --- JOURNAL SYSTEM ---
         function renderJournal() {
             const feed = document.getElementById('journal-feed');
             feed.innerHTML = "";
@@ -915,9 +971,11 @@
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
             
+            // Only stabilize decay if the image is clear (Opacity near 0)
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
             } else {
+                // If they save with bad signal, decay continues/doesn't reset
                 addMrOtherLog("SIGNAL LOST.");
             }
 
@@ -1010,6 +1068,50 @@
                     document.onmousemove = null; document.onmouseup = null;
                     if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
                     else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
+                };
+            };
+        }
+
+        function createSurfaceRoom() {
+            let id = "entry_" + Date.now();
+            world[id] = { 
+                id: id, parentId: null,
+                name: "New Entry", time: "Standard",
+                reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
+                occupants: [], remnants: [], journal: [],
+                image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now(), tunerSweetSpot: 50
+            };
+            saveMemory();
+            renderMap();
+        }
+
+        function setupSmartClick(element, id) {
+            let startX, startY, isDragging = false;
+            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
+            element.addEventListener('touchmove', (e) => {
+                 if(Math.abs(e.touches[0].clientX - startX) > 5) {
+                     isDragging = true;
+                     element.style.left = (e.touches[0].clientX - 40) + 'px';
+                     element.style.top = (e.touches[0].clientY - 50) + 'px';
+                 }
+            });
+            element.addEventListener('touchend', () => {
+                if(!isDragging) enterRoom(id);
+                else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
+            });
+            element.onmousedown = (e) => {
+                startX = e.clientX; isDragging = false;
+                document.onmousemove = (ev) => {
+                    if(Math.abs(ev.clientX - startX) > 5) {
+                        isDragging = true;
+                        element.style.left = (ev.clientX - 40) + 'px';
+                        element.style.top = (ev.clientY - 50) + 'px';
+                    }
+                };
+                document.onmouseup = () => {
+                    document.onmousemove = null; document.onmouseup = null;
+                    if(!isDragging) enterRoom(id);
+                    else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); }
                 };
             };
         }
