@@ -115,7 +115,7 @@
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 1s ease; }
         
-        /* STATIC OVERLAY (Screen Blend) */
+        /* STATIC OVERLAY */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
@@ -132,6 +132,14 @@
         
         /* MR OTHER EFFECTS */
         .bowing-effect { transform: scale(1.05); }
+
+        /* AGITATION LOCK (Panic Screen) */
+        #agitation-lock {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: #fff; z-index: 9999; display: none;
+            align-items: center; justify-content: center;
+            font-weight: bold; letter-spacing: 5px; color: var(--text);
+        }
 
         /* STATIC TUNER */
         #static-tuner-container {
@@ -231,12 +239,14 @@
         }
     </style>
 </head>
-<body>
+<body onclick="trackInput()">
 
     <div id="boot-screen" onclick="bootUp()">
         <h2 style="font-weight: 300; letter-spacing: 4px;">THE INBETWEEN</h2>
         <div class="pulse">TOUCH TO ENTER</div>
     </div>
+
+    <div id="agitation-lock">QUIET.</div>
 
     <div id="map-view" class="hidden"></div>
 
@@ -383,6 +393,12 @@
         let currentId = null;
         let clockInterval = null;
         let glacialMinutes = 0;
+        
+        // --- META TRIGGERS VARIABLES ---
+        let idleTimer = 0;
+        let clickCount = 0;
+        let clickResetTimer = null;
+        let batteryLevel = 1.0;
 
         // DICTIONARY DEFINITIONS FOR GHOST BOX
         const LEXICON = {
@@ -437,6 +453,67 @@
             document.getElementById('boot-screen').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
             renderMap();
+            initMetaTriggers(); // START THE CURSE
+        }
+
+        // --- META TRIGGERS (THE CURSE) ---
+        function initMetaTriggers() {
+            // 1. BATTERY VAMPIRE
+            if(navigator.getBattery) {
+                navigator.getBattery().then(function(battery) {
+                    batteryLevel = battery.level;
+                    battery.addEventListener('levelchange', function() { batteryLevel = battery.level; });
+                    battery.addEventListener('chargingchange', function() {
+                        if(battery.charging) addMrOtherLog("FEEDING...");
+                    });
+                });
+            }
+
+            // 2. IDLE SCOPOPHOBIA LOOP
+            setInterval(() => {
+                idleTimer++;
+                if(idleTimer > 60 && currentId) { // 60s of silence
+                    let tuner = document.getElementById('static-tuner');
+                    let currentVal = parseInt(tuner.value);
+                    if(currentVal < 90) {
+                        tuner.value = currentVal + 1;
+                        updateStatic(tuner.value);
+                    }
+                }
+            }, 1000);
+
+            // 3. TIME WITCHING HOUR CHECK
+            setInterval(() => {
+                let d = new Date();
+                if(d.getHours() === 3 && d.getMinutes() === 33) {
+                     document.body.style.filter = "invert(1)";
+                     setTimeout(() => { document.body.style.filter = "none"; }, 1000);
+                     if(Math.random() < 0.1) addMrOtherLog("THE VEIL IS THIN.");
+                }
+            }, 60000);
+        }
+
+        // 4. AGITATION (Input Tracker)
+        function trackInput() {
+            // Reset Idle
+            idleTimer = 0;
+            
+            // Panic Clicker
+            clickCount++;
+            if(!clickResetTimer) {
+                clickResetTimer = setTimeout(() => { clickCount = 0; clickResetTimer = null; }, 1000);
+            }
+            if(clickCount > 5) {
+                triggerAgitationLock();
+                clickCount = 0;
+            }
+        }
+
+        function triggerAgitationLock() {
+            let lock = document.getElementById('agitation-lock');
+            lock.style.display = "flex";
+            addMrOtherLog("QUIET.");
+            setTimeout(() => { lock.style.display = "none"; }, 3000);
         }
 
         // --- CLOCK LOGIC ---
@@ -482,13 +559,13 @@
             let sysBtn = document.createElement('div');
             sysBtn.className = 'btn-system-data';
             sysBtn.innerText = "[ SYSTEM ]";
-            sysBtn.onclick = toggleDataMenu;
+            sysBtn.onclick = (e) => { e.stopPropagation(); toggleDataMenu(); };
             map.appendChild(sysBtn);
 
             let btn = document.createElement('div');
             btn.className = 'btn-surface-add';
             btn.innerText = "+ NEW ENTRY POINT";
-            btn.onclick = createSurfaceRoom;
+            btn.onclick = (e) => { e.stopPropagation(); createSurfaceRoom(); };
             map.appendChild(btn);
 
             for(let key in world) {
@@ -558,7 +635,7 @@
             updateResonance(r);
             checkMrOther(r);
             
-            // CALCULATE DECAY (New System)
+            // CALCULATE DECAY
             let decay = calculateDecay(r);
             applyDecayVisuals(r, decay);
 
@@ -589,13 +666,12 @@
             explainTerm(r.reality);
         }
 
-        // --- NEW DECAY SYSTEM ---
+        // --- DECAY SYSTEM ---
         function calculateDecay(r) {
             if(!r.lastVisited) {
                 r.lastVisited = Date.now();
                 return 0;
             }
-            // 5 Minutes = 100% Decay (For Testing)
             let diff = Date.now() - r.lastVisited;
             let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 5)) * 100)); 
             return decayPercent;
@@ -604,19 +680,10 @@
         function applyDecayVisuals(r, decay) {
             const img = document.getElementById('room-img-display');
             const tuner = document.getElementById('static-tuner');
-            
-            img.className = ""; // Reset
-            
-            // Apply Filters based on Room Type & Decay
+            img.className = ""; 
             if (decay > 20) {
-                if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) {
-                    img.classList.add('decay-bright');
-                } else {
-                    img.classList.add('decay-dark');
-                }
-                
-                // Force Static Tuner UP
-                // You can drag it down, but it will visually show high static
+                if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.classList.add('decay-bright');
+                else img.classList.add('decay-dark');
                 tuner.value = decay; 
                 updateStatic(decay);
             } else {
@@ -625,47 +692,50 @@
             }
         }
 
-        // --- INTELLIGENT MR OTHER LOGIC (PACING FIXED) ---
+        // --- INTELLIGENT MR OTHER LOGIC (WITCHING HOUR + BATTERY) ---
 
-        // 1. MEDIUM BURN MATH
         function updateResonance(r) {
-            // DECAY: Happens if you stay in safe rooms
+            // META MULTIPLIERS
+            let multiplier = 1.0;
+            
+            // Time Check (Midnight to 4AM = 2x Speed)
+            let h = new Date().getHours();
+            if(h >= 0 && h < 4) multiplier *= 2;
+            if(h >= 8 && h < 18) multiplier *= 0.5; // Daytime slows him down
+
+            // Battery Check (< 20% = 2x Speed)
+            if(batteryLevel < 0.2) multiplier *= 2;
+
+            // BASE CALCULATION
             if (r.reality === "GROUNDED" && resonance > 0) resonance -= 0.5;
             
-            // GROWTH: Slowed down to "Medium" pace (Was 5/8, now 2/3)
-            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 2.0; 
-            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 3.0; 
+            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += (2.0 * multiplier); 
+            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += (3.0 * multiplier); 
             
-            // Item Boost
             let items = (r.remnants || []).join(" ").toLowerCase();
-            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 5.0;
+            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += (5.0 * multiplier);
 
-            // Cap resonance
             if (resonance > 100) resonance = 100;
             if (resonance < 0) resonance = 0;
             
             saveMemory();
         }
 
-        // 2. THE VISUAL CHECK
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            
-            // Only add Mr. Other effects if Decay hasn't already messed it up
             if(!img.classList.contains('decay-bright') && !img.classList.contains('decay-dark')) {
                 if(resonance > 50) img.classList.add('bowing-effect');
                 if(resonance > 90) img.classList.add('dark-mode');
             }
         }
 
-        // 3. THE SLIDER CONTROL (With Decay Lock)
         function updateStatic(val) {
             const overlay = document.getElementById('static-overlay');
             let opacity = (val / 100) * 0.8;
             overlay.style.opacity = opacity;
         }
 
-        // 4. THE CHAOS GRAMMAR ENGINE (OBSESSION UPDATE)
+        // --- CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
             subjects: [
                 "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
@@ -720,15 +790,13 @@
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
-        // 5. THE ANALYZER (Medium Response Rate)
         function analyzeJournalInput(text) {
-            if (resonance < 15) return; // Need some resonance
-            if (Math.random() > 0.85) return; // 15% ignore rate
+            if (resonance < 15) return; 
+            if (Math.random() > 0.85) return; 
 
             const input = text.toLowerCase();
             let context = "neutral";
             
-            // Detect Context/Vibe
             if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
             else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
             else if (input.includes("i am") || input.includes("me") || input.includes("my") || input.includes("face")) context = "self";
@@ -737,7 +805,6 @@
 
             let reply = generateSentence(context);
 
-            // Occasional "Glitch" Override (Obsessive)
             if (Math.random() < 0.15) {
                 const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN.", "FOREVER.", "JUST US."];
                 reply = glitches[Math.floor(Math.random() * glitches.length)];
@@ -782,7 +849,6 @@
             
             world[currentId].journal.push({ time: time, text: val });
             
-            // TRIGGER THE BRAIN
             analyzeJournalInput(val);
 
             inp.value = "";
@@ -859,11 +925,8 @@
             r.atmosphere = document.getElementById('inp-atmosphere').value;
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
-            
-            // UPDATE TIMESTAMP (Fixes Decay)
             r.lastVisited = Date.now();
             
-            // Re-check Visuals immediately to clear decay effect
             let decay = calculateDecay(r);
             applyDecayVisuals(r, decay);
 
