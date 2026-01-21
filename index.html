@@ -115,14 +115,27 @@
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.5s; }
         
-        /* Effects */
+        /* FIXED VISUAL EFFECTS */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48ZmlsdGVyIGlkPSJnoiPjGZldHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuNjUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjZykiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==');
-            opacity: 0; pointer-events: none; mix-blend-mode: overlay;
+            /* Changed to screen blend mode for visibility on dark images */
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+            opacity: 0; 
+            pointer-events: none; 
+            mix-blend-mode: screen; 
+            transition: opacity 0.2s;
+            z-index: 5;
         }
-        .bowing-effect { transform: scale(1.1) rotate(1deg); filter: blur(2px) contrast(1.2); }
-        .dark-mode { filter: brightness(0.3) grayscale(1); }
+        
+        .bowing-effect { 
+            transform: scale(1.05); 
+            filter: contrast(1.2) hue-rotate(5deg); 
+            transition: all 2s ease;
+        }
+        
+        .dark-mode { 
+            filter: brightness(0.4) contrast(1.5) grayscale(1); 
+        }
 
         /* STATIC TUNER */
         #static-tuner-container {
@@ -430,7 +443,7 @@
             renderMap();
         }
 
-        // --- CLOCK & MR OTHER LOGIC ---
+        // --- CLOCK LOGIC ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             glacialMinutes = 0;
@@ -576,70 +589,114 @@
             explainTerm(r.reality);
         }
 
-        // --- MR OTHER SYSTEMS ---
-        function updateResonance(r) {
-            // Decay
-            if (r.reality === "GROUNDED" && resonance > 0) resonance -= 5;
-            
-            // Growth
-            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 10;
-            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 15;
-            
-            let items = (r.remnants || []).join(" ").toLowerCase();
-            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 20;
+        // --- INTELLIGENT MR OTHER LOGIC (CHAOS GRAMMAR) ---
 
+        // 1. SLOW BURN MATH
+        function updateResonance(r) {
+            // DECAY: Happens faster now if you ignore him (Realism)
+            if (r.reality === "GROUNDED" && resonance > 0) resonance -= 0.5;
+            
+            // GROWTH: Much slower. It takes many visits to build a bond.
+            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 0.5; // Was 10
+            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 1.0; // Was 15
+            
+            // He likes specific items, but only a little bit at a time
+            let items = (r.remnants || []).join(" ").toLowerCase();
+            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 2.0;
+
+            // Cap resonance
             if (resonance > 100) resonance = 100;
             if (resonance < 0) resonance = 0;
+            
             saveMemory();
         }
 
+        // 2. THE VISUAL & AUDIO CHECK
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            const overlay = document.getElementById('static-overlay');
             const tuner = document.getElementById('static-tuner');
             
-            // Reset effects
+            // Reset visuals first
             img.className = "";
-            overlay.classList.remove('dark-mode');
-            tuner.value = 0;
-            updateStatic(0);
-
-            // STAGE 1: PASSING (Resonance 20-50)
-            if (resonance > 20 && Math.random() < 0.3) {
-                const sym = ["Sudden chill.", "Smell of ozone.", "Ringing in left ear.", "Metallic taste."];
-                addSystemLog(sym[Math.floor(Math.random()*sym.length)]);
-            }
-
-            // STAGE 2: DIRECT (Resonance 51-80)
-            if (resonance > 50) {
+            
+            // If user hasn't touched the slider manually, we control it based on resonance
+            if(resonance > 60) {
                 img.classList.add('bowing-effect');
-                tuner.value = 30;
-                updateStatic(30);
-                if(Math.random() < 0.4) editJournal(r);
             }
-
-            // STAGE 3: PROLONGED (Resonance 81+)
-            if (resonance > 80) {
+            if(resonance > 90) {
                 img.classList.add('dark-mode');
-                tuner.value = 80;
-                updateStatic(80);
-                if(Math.random() < 0.5) {
-                    addMrOtherLog("I AM SYNCED TO YOUR BREATHING.");
-                }
             }
         }
 
+        // 3. THE SLIDER CONTROL (Fixed for dark images)
         function updateStatic(val) {
             const overlay = document.getElementById('static-overlay');
-            overlay.style.opacity = val / 100;
+            // Convert 1-100 range to 0.0-0.8 opacity (never fully block view)
+            let opacity = (val / 100) * 0.8;
+            overlay.style.opacity = opacity;
         }
 
-        function addSystemLog(text) {
-            if(!currentId) return;
-            let entry = { time: document.getElementById('liminal-clock').innerText, text: text, type: "system" };
-            if(!world[currentId].journal) world[currentId].journal = [];
-            world[currentId].journal.push(entry);
-            renderJournal();
+        // 4. THE CHAOS GRAMMAR ENGINE (Mr. Other's Brain)
+        const VOCAB = {
+            subjects: ["THE STATIC", "YOUR SHADOW", "THE WALLS", "TIME", "WE", "IT", "THE HUNGER", "A GHOST"],
+            verbs: ["CONSUMES", "WATCHES", "REMEMBERS", "HATES", "LOVES", "BECOMES", "ROTATES", "MIMICS"],
+            objects: ["THE SIGNAL", "YOUR BREATH", "THE EXIT", "THE COLD", "MEMORY", "THE LIGHT", "YOU"],
+            adjectives: ["HOLLOW", "LOUD", "WRONG", "INFINITE", "DEAD", "WAITING", "BROKEN"],
+            
+            // Context-Specific Words
+            fear_words: ["THE TREMBLING", "YOUR FEAR", "PANIC", "THE SCREAM"],
+            location_words: ["THIS ROOM", "THE FLOOR", "THE CEILING", "THE DOOR"],
+            self_words: ["YOUR FACE", "THE MIRROR", "THE SKIN", "THE EYES"]
+        };
+
+        function generateSentence(context) {
+            const structure = Math.floor(Math.random() * 3);
+            let s = "", v = "", o = "";
+
+            if (context === "fear") s = getRandom(VOCAB.fear_words);
+            else if (context === "location") s = getRandom(VOCAB.location_words);
+            else if (context === "self") s = getRandom(VOCAB.self_words);
+            else s = getRandom(VOCAB.subjects);
+
+            v = getRandom(VOCAB.verbs);
+            o = getRandom(VOCAB.objects);
+            const adj = getRandom(VOCAB.adjectives);
+
+            if (structure === 0) return `${s} ${v} ${o}.`; 
+            else if (structure === 1) return `${o} IS ${adj}.`; 
+            else return `${v} ${o}... ${adj}.`; 
+        }
+
+        function getRandom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        // 5. THE ANALYZER (Intuitive Listener)
+        function analyzeJournalInput(text) {
+            if (resonance < 30) return; // Too weak to speak
+            if (Math.random() > 0.85) return; // Sometimes he ignores you
+
+            const input = text.toLowerCase();
+            let context = "neutral";
+            
+            // Detect Context/Vibe
+            if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
+            else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
+            else if (input.includes("i am") || input.includes("me") || input.includes("my") || input.includes("face")) context = "self";
+
+            // Generate a UNIQUE reply
+            let reply = generateSentence(context);
+
+            // Occasional "Glitch" Override (Direct hard-coded creepiness)
+            if (Math.random() < 0.1) {
+                const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN."];
+                reply = glitches[Math.floor(Math.random() * glitches.length)];
+            }
+
+            // Send with delay
+            setTimeout(() => {
+                addMrOtherLog(reply);
+            }, 2000 + Math.random() * 3000);
         }
 
         function addMrOtherLog(text) {
@@ -651,11 +708,10 @@
         }
 
         function editJournal(r) {
-            // Find a normal entry and corrupt it
             if(!r.journal || r.journal.length === 0) return;
             let targetIdx = Math.floor(Math.random() * r.journal.length);
             let entry = r.journal[targetIdx];
-            if(entry.type) return; // Don't edit system logs
+            if(entry.type) return; 
 
             const replacements = [
                 {from: "alone", to: "WITH HIM"},
@@ -706,6 +762,10 @@
             if(!world[currentId].journal) world[currentId].journal = [];
             
             world[currentId].journal.push({ time: time, text: val });
+            
+            // TRIGGER THE BRAIN
+            analyzeJournalInput(val);
+
             inp.value = "";
             saveRoom();
             renderJournal();
@@ -744,8 +804,8 @@
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
             
-            // JEALOUSY TRIGGER
-            if(resonance > 80) {
+            // JEALOUSY TRIGGER (Still exists, but rarer)
+            if(resonance > 95) {
                  world[newId].name = "DEAD ZONE";
                  addMrOtherLog("WHY ARE YOU LEAVING?");
             }
@@ -798,8 +858,8 @@
             let val = input.value.trim();
             if(!val || !currentId) return;
             
-            // MR OTHER BLOCKING TAGS
-            if(resonance > 80 && type === 'occupants') {
+            // MR OTHER BLOCKING TAGS (Rarer now)
+            if(resonance > 90 && type === 'occupants') {
                 addMrOtherLog("NO. ONLY US.");
                 input.value = "";
                 return;
