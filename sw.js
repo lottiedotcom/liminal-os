@@ -1,5 +1,5 @@
-// VERSION v18 - STABILITY FIX
-const CACHE_NAME = 'inbetween-v18';
+// VERSION v14 - Tuner Mechanic Update
+const CACHE_NAME = 'inbetween-v14';
 const ASSETS = [
   './',
   './index.html',
