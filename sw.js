@@ -1,5 +1,5 @@
-// VERSION v16 - Safety Fixes for Menu
-const CACHE_NAME = 'inbetween-v16';
+// VERSION v17 - Menu Safety Fix
+const CACHE_NAME = 'inbetween-v17';
 const ASSETS = [
   './',
   './index.html',
