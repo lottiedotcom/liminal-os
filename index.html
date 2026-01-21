@@ -88,7 +88,9 @@
         .icon-label {
             margin-top: 8px; font-size: 9px; font-weight: bold; background: rgba(255,255,255,0.8); 
             padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase; letter-spacing: 1px;
+            white-space: nowrap;
         }
+        .ghost-tag { color: var(--danger); font-family: var(--mono); margin-left: 4px; font-size: 8px; }
 
         /* --- 4. EDITOR VIEW --- */
         #room-editor-view {
@@ -104,10 +106,10 @@
             font-size: 10px; font-weight: bold; color: #a0aec0; overflow-x: auto;
             backdrop-filter: blur(5px);
         }
-        .crumb { color: var(--accent); cursor: pointer; text-transform: uppercase; }
+        .crumb { color: var(--accent); cursor: pointer; text-transform: uppercase; transition: color 0.1s; }
+        .crumb-glitch { color: var(--danger) !important; font-family: var(--mono); }
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
-        .crumb-lost { color: var(--danger); font-family: var(--mono); letter-spacing: 2px; }
 
         /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
@@ -116,18 +118,12 @@
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.2s ease; }
         
-        /* STATIC OVERLAY */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 1; 
-            pointer-events: none; 
-            mix-blend-mode: screen; 
-            transition: opacity 0.1s;
-            z-index: 5;
+            opacity: 1; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.1s; z-index: 5;
         }
 
-        /* TRANSITION SCREEN (BLACK VOID) */
         #transition-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 99999; opacity: 0; pointer-events: none;
@@ -135,14 +131,12 @@
             display: flex; align-items: center; justify-content: center;
         }
         
-        /* DISTORTED WELCOME TEXT */
         #transition-text {
             color: #fff; font-family: var(--mono); font-size: 14px; 
             letter-spacing: 4px; text-transform: uppercase; opacity: 0.8;
             text-shadow: 0 0 10px var(--accent);
         }
 
-        /* SCAN RIPPLE EFFECT */
         .scan-ripple {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(to bottom, transparent 0%, rgba(56, 178, 172, 0.8) 50%, transparent 100%);
@@ -221,7 +215,6 @@
             border-left: 3px solid var(--accent);
         }
 
-        /* LIVING JOURNAL */
         #journal-container {
             background: rgba(255,255,255,0.5); border: 1px solid var(--border);
             border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;
@@ -243,10 +236,7 @@
         #inp-journal { border: none; background: #fff; border-radius: 0; }
         #btn-journal { border: none; background: var(--text); color: #fff; width: 50px; cursor: pointer; font-weight: bold; }
 
-        /* DIAGNOSTICS GRID */
-        .diag-grid {
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
-        }
+        .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
         .diag-grid select { font-size: 10px; padding: 6px; }
 
         .tag-wrapper { display: flex; gap: 5px; }
@@ -258,12 +248,15 @@
         .btn-row { display: flex; gap: 10px; margin-top: 10px; margin-bottom: 30px;}
         .btn-primary { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
         .btn-connect { flex: 1; background: #2d3748; color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 1px; }
-        .btn-emergency { width: 100%; background: var(--danger); color: white; border: none; padding: 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px; letter-spacing: 2px; margin-top: 10px; display: none; }
-
+        
         .hotspot {
             position: absolute; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; 
             font-size: 24px; color: rgba(255,255,255,0.9); text-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; background: rgba(0,0,0,0.1); transition: all 0.2s;
         }
+        
+        .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
+        .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
+        .bowing-effect { transform: scale(1.05); }
     </style>
 </head>
 <body onclick="trackInput()">
@@ -404,8 +397,6 @@
                 <button class="btn-primary" id="btn-save" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
-            
-            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()">EMERGENCY FLUSH</button>
         </div>
     </div>
 
@@ -540,12 +531,14 @@
                         batt.addEventListener('chargingchange', () => { 
                             this.isFeeding = batt.charging;
                             if(this.isFeeding) {
-                                addMrOtherLog("FEEDING...");
+                                addMrOtherLog("FEED US...");
                                 resonance = Math.min(100, resonance + 20);
                             }
                         });
                     });
                 }
+                
+                window.addEventListener('offline', () => { addMrOtherLog("JUST US NOW."); });
                 
                 // 3:33 CHECKER
                 setInterval(() => {
@@ -565,7 +558,7 @@
             
             triggerPossession() {
                 const input = document.getElementById('inp-journal');
-                if(input.disabled) return; // Already possessed
+                if(input.disabled) return; 
                 
                 input.disabled = true;
                 input.value = "";
@@ -586,27 +579,27 @@
                 if(text.toLowerCase().includes("loud")) SystemAudio.setVolume(0.05);
                 if(text.toLowerCase().includes("quiet")) SystemAudio.setVolume(0.3);
                 
-                // BATTERY GASLIGHT
+                // OBSESSIVE EDITOR (A/B MIX)
+                text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR"); // Identity
+                text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY"); // Desire
+                
                 if(this.batteryLevel < 0.2) {
-                    text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR");
-                }
-                if(this.batteryLevel < 0.5) {
-                    text = text.replace(/safe/gi, "TRAPPED").replace(/exit/gi, "WALL");
+                    text += " (FEED US)";
                 }
                 return text;
             },
             
-            vandalize(logIndex) {
+            vandalize() {
                 // STRIKETHROUGH ATTACK
-                if(Math.random() > 0.3) return; // Chance to happen
+                if(Math.random() > 0.3) return; 
                 
                 setTimeout(() => {
                     const feed = document.getElementById('journal-feed');
                     const entries = feed.getElementsByClassName('log-entry');
                     if(entries.length > 0) {
-                        const target = entries[entries.length - 1]; // Last entry
+                        const target = entries[entries.length - 1]; 
                         const originalText = target.innerHTML;
-                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">NO.</span>`;
+                        target.innerHTML = `<span style="text-decoration:line-through; opacity:0.5">${originalText}</span> <span style="color:var(--danger)">NO. STAY.</span>`;
                     }
                 }, 3000);
             }
@@ -632,45 +625,26 @@
         let currentStaticOpacity = 1.0;
 
         const LEXICON = {
-            "GROUNDED": "1:1 with baseline reality. Stable.",
-            "TRANSITIONAL": "A space of movement. Not a destination.",
-            "ARTIFICIAL": "Constructed reality. Too clean.",
-            "DORMANT": "Asleep. Waiting for an observer.",
-            "BUFFERED": "High latency. Air feels thick.",
-            "HOLLOW": "Visuals without substance. Empty.",
-            "STERILE": "Devoid of life. Clinical.",
-            "STAGNANT": "Air has not moved in decades.",
-            "HUMMING": "Low-frequency mechanical drone.",
-            "HAZY": "Soft focus. Dream logic.",
-            "SUBMERGED": "Sensation of being underwater.",
-            "NEUTRAL": "Baseline emotional state.",
-            "KENOPSIA": "Atmosphere of a place usually bustling, now abandoned.",
-            "ANEMOIA": "Nostalgia for a time you've never known.",
-            "MUTED": "Sensory dampening.",
-            "WATCHED": "The architecture is observing you.",
-            "JAMAIS VU": "Familiar place feels unrecognizable.",
-            "FLOATING": "Dissociation. Detachment.",
-            "Standard": "Baseline flow.",
-            "Stagnant": "Time stopped.",
-            "Glacial": "Time crawls heavily.",
-            "Rapid": "Time spins wildly.",
-            "Looping": "Recursive events.",
-            "Reverse": "Inverted flow.",
-            "Non-Linear": "Fatal error."
+            "GROUNDED": "1:1 with baseline reality.", "TRANSITIONAL": "A space of movement.",
+            "ARTIFICIAL": "Constructed reality.", "DORMANT": "Asleep.", "BUFFERED": "High latency.",
+            "HOLLOW": "Visuals without substance.", "STERILE": "Devoid of life.",
+            "STAGNANT": "Air has not moved.", "HUMMING": "Low drone.", "HAZY": "Soft focus.",
+            "SUBMERGED": "Underwater sensation.", "NEUTRAL": "Baseline.",
+            "KENOPSIA": "Atmosphere of abandoned bustle.", "ANEMOIA": "Nostalgia for the unknown.",
+            "MUTED": "Sensory dampening.", "WATCHED": "Observed.", "JAMAIS VU": "Unrecognizable familiarity.",
+            "FLOATING": "Dissociation.", "Standard": "Baseline flow.", "Stagnant": "Time stopped.",
+            "Glacial": "Time crawls.", "Rapid": "Time spins.", "Looping": "Recursive.", "Reverse": "Inverted.", "Non-Linear": "Error."
         };
 
         function explainTerm(term) {
             const el = document.getElementById('interpreter-bar');
-            if(LEXICON[term]) el.innerText = "> " + LEXICON[term];
-            else el.innerText = "SCANNING...";
+            el.innerText = LEXICON[term] ? "> " + LEXICON[term] : "SCANNING...";
         }
 
         function loadMemory() {
             const saved = localStorage.getItem('inbetween_data');
             const savedRes = localStorage.getItem('mr_other_resonance');
-            if(saved) {
-                try { world = JSON.parse(saved); } catch(e) {}
-            }
+            if(saved) { try { world = JSON.parse(saved); } catch(e) {} }
             if(savedRes) resonance = parseFloat(savedRes);
         }
         function saveMemory() { 
@@ -694,13 +668,15 @@
         function initMetaTriggers() {
             setInterval(() => {
                 idleTimer++;
-                if(idleTimer > 60 && currentId) {
+                // OBSERVER IDLE TRIGGER (45s)
+                if(idleTimer > 45 && currentId) {
                     let tuner = document.getElementById('static-tuner');
                     let currentVal = parseInt(tuner.value);
-                    if(currentVal < 90) {
-                        tuner.value = currentVal + 1;
-                        updateStatic(tuner.value);
-                    }
+                    let r = world[currentId];
+                    // Drift away from sweet spot
+                    if(currentVal < r.tunerSweetSpot) tuner.value = currentVal - 1;
+                    else tuner.value = currentVal + 1;
+                    updateStatic(tuner.value);
                 }
             }, 1000);
         }
@@ -720,40 +696,34 @@
 
         function triggerAgitationLock() {
             let lock = document.getElementById('agitation-lock');
+            lock.innerText = "CALM DOWN";
             lock.style.display = "flex";
-            addMrOtherLog("QUIET.");
-            setTimeout(() => { lock.style.display = "none"; }, 3000);
+            setTimeout(() => { lock.style.display = "none"; }, 1000);
         }
 
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             let glacialMinutes = 0;
-            
             clockInterval = setInterval(() => {
                 if(!currentId) return;
                 const clock = document.getElementById('liminal-clock');
                 const mode = world[currentId].time || "Standard";
                 let displayTime = "";
                 const now = new Date();
-
                 if(mode === "Standard") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 else if(mode === "Stagnant") displayTime = "00:00";
                 else if(mode === "Rapid") {
-                    let h = Math.floor(Math.random() * 24).toString().padStart(2,'0');
-                    let m = Math.floor(Math.random() * 60).toString().padStart(2,'0');
-                    displayTime = `${h}:${m}`;
+                    displayTime = `${Math.floor(Math.random()*24).toString().padStart(2,'0')}:${Math.floor(Math.random()*60).toString().padStart(2,'0')}`;
                 }
                 else if(mode === "Glacial") {
                     glacialMinutes += 0.05; 
-                    let addedM = Math.floor(glacialMinutes);
-                    let m = (now.getMinutes() + addedM) % 60;
-                    let h = (now.getHours() + Math.floor((now.getMinutes() + addedM) / 60)) % 24;
+                    let m = (now.getMinutes() + Math.floor(glacialMinutes)) % 60;
+                    let h = (now.getHours()) % 24;
                     displayTime = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
                 }
                 else if(mode === "Looping") displayTime = (Date.now() % 2000 < 1000) ? "11:11" : "12:00";
                 else if(mode === "Reverse") displayTime = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).split('').reverse().join('');
-                else displayTime = ["ERR::", "NULL", "88:88", "??:??"][Math.floor(Math.random()*4)];
-                
+                else displayTime = "ERR::";
                 clock.innerText = displayTime;
             }, 150);
         }
@@ -783,7 +753,12 @@
                     el.style.top = r.y + 'px';
                     
                     let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
-                    el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${r.name}</div>`;
+                    
+                    // GHOST LABELS
+                    let label = r.name;
+                    if(resonance > 20 && Math.random() > 0.5) label += ` <span class="ghost-tag">(OURS)</span>`;
+                    
+                    el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${label}</div>`;
                     
                     setupSmartClick(el, key);
                     map.appendChild(el);
@@ -795,7 +770,6 @@
             let modal = document.getElementById('data-modal');
             if(modal.classList.contains('hidden')) modal.classList.remove('hidden');
             else modal.classList.add('hidden');
-            
             document.getElementById('data-menu-buttons').classList.remove('hidden');
             document.getElementById('lexicon-view').classList.add('hidden');
         }
@@ -803,7 +777,6 @@
         function showLexicon() {
             document.getElementById('data-menu-buttons').classList.add('hidden');
             document.getElementById('lexicon-view').classList.remove('hidden');
-            
             const container = document.getElementById('lexicon-content');
             container.innerHTML = "";
             for (let [term, def] of Object.entries(LEXICON)) {
@@ -854,16 +827,6 @@
             }
         }
 
-        function getDepth(id) {
-            let depth = 0;
-            let curr = world[id];
-            while (curr && curr.parentId) {
-                depth++;
-                curr = world[curr.parentId];
-            }
-            return depth;
-        }
-
         function generateDistortedWelcome() {
             const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"];
             return phrases[Math.floor(Math.random() * phrases.length)];
@@ -873,7 +836,6 @@
             SystemAudio.stopAll();
             const ts = document.getElementById('transition-screen');
             ts.style.opacity = "1";
-            
             setTimeout(() => {
                 enterRoom('origin');
                 document.getElementById('map-view').classList.remove('hidden');
@@ -906,15 +868,7 @@
                     checkMrOther(r);
                     updateStatic(r.tunerSweetSpot);
 
-                    let depth = getDepth(id);
-                    if (depth >= 3) {
-                        document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
-                        document.getElementById('btn-emergency').style.display = "block";
-                    } else {
-                        renderBreadcrumbs(id);
-                        document.getElementById('btn-emergency').style.display = "none";
-                    }
-
+                    renderBreadcrumbs(id);
                     document.getElementById('map-view').classList.add('hidden');
                     document.getElementById('room-editor-view').classList.remove('hidden');
                     
@@ -987,9 +941,9 @@
         }
 
         const VOCAB = {
-            subjects: ["THE STATIC", "IT", "WE", "MR. OTHER", "THE ROOM"],
-            verbs: ["CONSUMES", "WATCHES", "MIMICS", "KNOWS", "SEES"],
-            objects: ["YOU", "YOUR FACE", "YOUR BREATH", "THE TRUTH", "FOREVER"]
+            subjects: ["IT", "WE", "MR. OTHER", "THE ROOM", "THE REFLECTION"],
+            verbs: ["WATCHES", "MIMICS", "KNOWS", "SEES", "LOVES"],
+            objects: ["US", "OUR FACE", "OUR BREATH", "THE TRUTH", "FOREVER"]
         };
         function generateSentence() {
             let s = Math.random() > 0.5 ? VOCAB.subjects[0] : VOCAB.subjects[1];
@@ -1059,11 +1013,26 @@
             let path = []; let curr = world[id];
             while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; }
             let nav = document.getElementById('nav-bar');
-            nav.innerHTML = `<span class="crumb" onclick="closeEditor()">MAP</span>`;
+            nav.innerHTML = `<span class="crumb" onclick="closeEditor(this)">MAP</span>`;
             path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; });
         }
 
-        function closeEditor() {
+        function closeEditor(btn) {
+            // DESPERATE ARCHITECT (GLITCH ON EXIT)
+            if(Math.random() > 0.7) {
+                btn.innerText = "STAY";
+                btn.classList.add("crumb-glitch");
+                setTimeout(() => {
+                    btn.innerText = "MAP";
+                    btn.classList.remove("crumb-glitch");
+                    performClose();
+                }, 500);
+            } else {
+                performClose();
+            }
+        }
+        
+        function performClose() {
             saveRoom();
             SystemAudio.stopAll();
             SystemAudio.playOSAmbience();
