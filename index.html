@@ -406,16 +406,12 @@
         const SystemAudio = {
             ctx: null,
             
-            // Nodes for OS Hum
+            // Nodes
             osNoiseSrc: null,
-            osFilter: null,
             osGain: null,
-            
-            // Nodes for Room Ambience
             roomNoiseSrc: null,
             roomNoiseGain: null,
-            roomHumOsc: null,
-            roomHumGain: null,
+            masterFilter: null, // Global LowPass to kill all high pitch
             
             // Buffers
             pinkBuffer: null,
@@ -427,39 +423,38 @@
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
                 
+                // GLOBAL FILTER: Kill everything above 400Hz (Muffled, Underwater, No whine)
+                this.masterFilter = this.ctx.createBiquadFilter();
+                this.masterFilter.type = 'lowpass';
+                this.masterFilter.frequency.value = 400; 
+                this.masterFilter.connect(this.ctx.destination);
+
                 // Create Noise Buffers (3s loops)
                 this.pinkBuffer = this.createNoiseBuffer('pink');
                 this.whiteBuffer = this.createNoiseBuffer('white');
                 this.brownBuffer = this.createNoiseBuffer('brown');
 
-                // OS FAN SETUP (White Noise -> LowPass -> Rumble)
+                // OS FAN SETUP (Brown Noise Loop)
                 this.osNoiseSrc = this.ctx.createBufferSource();
-                this.osNoiseSrc.buffer = this.whiteBuffer;
+                this.osNoiseSrc.buffer = this.brownBuffer;
                 this.osNoiseSrc.loop = true;
-                
-                this.osFilter = this.ctx.createBiquadFilter();
-                this.osFilter.type = 'lowpass';
-                this.osFilter.frequency.value = 120; // Super low rumble
-                
                 this.osGain = this.ctx.createGain();
                 this.osGain.gain.value = 0; // Starts silent
                 
-                this.osNoiseSrc.connect(this.osFilter);
-                this.osFilter.connect(this.osGain);
-                this.osGain.connect(this.ctx.destination);
+                this.osNoiseSrc.connect(this.osGain);
+                this.osGain.connect(this.masterFilter);
                 this.osNoiseSrc.start();
 
                 // Room Audio Setup (Init empty)
                 this.roomNoiseGain = this.ctx.createGain();
                 this.roomNoiseGain.gain.value = 0;
-                this.roomNoiseGain.connect(this.ctx.destination);
+                this.roomNoiseGain.connect(this.masterFilter);
+            },
 
-                this.roomHumOsc = this.ctx.createOscillator();
-                this.roomHumGain = this.ctx.createGain();
-                this.roomHumGain.gain.value = 0;
-                this.roomHumOsc.connect(this.roomHumGain);
-                this.roomHumGain.connect(this.ctx.destination);
-                this.roomHumOsc.start();
+            resume() {
+                if(this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
             },
 
             createNoiseBuffer(type) {
@@ -496,18 +491,17 @@
 
             playOSAmbience() {
                 if(!this.ctx) return;
-                // Fade IN OS Fan, Fade OUT Room
                 const t = this.ctx.currentTime;
-                this.osGain.gain.setTargetAtTime(0.08, t, 0.5); 
+                // Fade IN OS (Deep Fan), Fade OUT Room
+                this.osGain.gain.setTargetAtTime(0.15, t, 0.5); 
                 this.roomNoiseGain.gain.setTargetAtTime(0, t, 0.2);
-                this.roomHumGain.gain.setTargetAtTime(0, t, 0.2);
                 if(this.roomNoiseSrc) { this.roomNoiseSrc.stop(t+0.5); this.roomNoiseSrc = null; }
             },
 
             playRoomAmbience() {
                 if(!this.ctx) return;
-                // Fade OUT OS Fan
                 const t = this.ctx.currentTime;
+                // Fade OUT OS Fan
                 this.osGain.gain.setTargetAtTime(0, t, 0.2);
                 this.updateRoomAmbience();
             },
@@ -517,15 +511,13 @@
                 const r = world[currentId];
                 const mode = r.time || "Standard";
                 
-                // Determine Noise & Hum based on Temporal State
-                let buffer = this.pinkBuffer;
-                let freq = 60; 
-                let baseHumVol = 0.1;
+                // Determine Noise Color
+                let buffer = this.pinkBuffer; // Default (Rain/Wind vibe)
+                let volume = 0.15;
 
-                if (mode === "Glacial") { buffer = this.brownBuffer; freq = 40; baseHumVol = 0.25; }
-                else if (mode === "Rapid") { buffer = this.whiteBuffer; freq = 120; baseHumVol = 0.08; }
-                else if (mode === "Stagnant") { buffer = null; freq = 8000; baseHumVol = 0.01; } // Tinnitus
-                else if (mode === "Looping") { buffer = this.pinkBuffer; freq = 55; }
+                if (mode === "Glacial") { buffer = this.brownBuffer; volume = 0.3; } // Deep Rumble
+                if (mode === "Rapid") { buffer = this.whiteBuffer; volume = 0.08; } // Hiss (but filtered low)
+                if (mode === "Stagnant") { buffer = this.brownBuffer; volume = 0.05; } // Quiet
                 
                 // Start Noise Source if not playing
                 if (buffer && (!this.roomNoiseSrc || this.roomNoiseSrc.buffer !== buffer)) {
@@ -537,79 +529,68 @@
                     this.roomNoiseSrc.start();
                 }
 
-                // Resonance Warping
-                if (resonance > 0) {
-                    freq -= (resonance * 0.5); // Pitch Drop
-                }
-
                 const t = this.ctx.currentTime;
-                // Volume logic: Room Noise is tied to Static Opacity
-                // Room Hum is tied to inverse Static Opacity (Clearer signal = Louder Hum)
-                
-                let noiseVol = buffer ? currentStaticOpacity * 0.2 : 0;
-                let humVol = baseHumVol * (1 - (currentStaticOpacity * 0.5));
-
-                this.roomNoiseGain.gain.setTargetAtTime(noiseVol, t, 0.1);
-                this.roomHumOsc.frequency.setTargetAtTime(freq, t, 0.2);
-                this.roomHumGain.gain.setTargetAtTime(humVol, t, 0.1);
+                // Volume modulates with static
+                let adjustedVol = volume + (currentStaticOpacity * 0.1); 
+                this.roomNoiseGain.gain.setTargetAtTime(adjustedVol, t, 0.1);
             },
 
             playClick() {
                 if(!this.ctx) return;
-                const osc = this.ctx.createOscillator();
+                // SNOWY CRUNCH: Short burst of BandPass Pink Noise
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.pinkBuffer;
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 400; // Crunchy mids
+                filter.Q.value = 1.0;
+
                 const gain = this.ctx.createGain();
-                osc.connect(gain);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1); // Fast decay
+
+                src.connect(filter);
+                filter.connect(gain);
                 gain.connect(this.ctx.destination);
-                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.05);
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.06);
+                
+                src.start();
+                src.stop(this.ctx.currentTime + 0.1);
             },
 
             playProcess() {
                 if(!this.ctx) return;
-                const osc = this.ctx.createOscillator();
+                // LONGER CRUNCH
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.brownBuffer;
+                
                 const gain = this.ctx.createGain();
-                osc.type = 'square';
-                osc.connect(gain);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.4);
+
+                src.connect(this.masterFilter); // Use global lowpass
+                src.connect(gain);
                 gain.connect(this.ctx.destination);
-                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-                gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.2);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.2);
+                
+                src.start();
+                src.stop(this.ctx.currentTime + 0.4);
             },
 
             playPurge() {
                 if(!this.ctx) return;
-                // Mechanical Thunk
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.5);
+                // HEAVY THUD (Brown Noise Burst)
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.brownBuffer;
                 
-                // Rising Tone
-                const rise = this.ctx.createOscillator();
-                const riseGain = this.ctx.createGain();
-                rise.type = 'sine';
-                rise.frequency.setValueAtTime(200, this.ctx.currentTime);
-                rise.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 1.0);
-                riseGain.gain.setValueAtTime(0, this.ctx.currentTime);
-                riseGain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.5);
-                riseGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
-                rise.connect(riseGain);
-                riseGain.connect(this.ctx.destination);
-                rise.start();
-                rise.stop(this.ctx.currentTime + 1.0);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.8);
+
+                src.connect(this.masterFilter);
+                src.connect(gain);
+                gain.connect(this.ctx.destination);
+                src.start();
+                src.stop(this.ctx.currentTime + 0.8);
             }
         };
 
@@ -681,9 +662,10 @@
         }
 
         function bootUp() {
+            // Force Audio Init on Boot Click
             SystemAudio.init(); 
             if(SystemAudio.ctx) SystemAudio.ctx.resume();
-            SystemAudio.playOSAmbience(); // Start OS Hum
+            SystemAudio.playOSAmbience(); 
             
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
@@ -716,9 +698,9 @@
         }
 
         function trackInput() {
-            if (SystemAudio.ctx && SystemAudio.ctx.state === 'suspended') {
-                SystemAudio.ctx.resume();
-            }
+            // Force Resume on ANY click
+            SystemAudio.resume();
+            
             idleTimer = 0;
             clickCount++;
             if(!clickResetTimer) {
