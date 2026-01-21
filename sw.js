@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v5.0-SILENT';
+const CACHE_NAME = 'inbetween-v5.5-NO-CLICKS';
 const ASSETS = [
   './',
   './index.html',
@@ -6,17 +6,15 @@ const ASSETS = [
   './icon.png'
 ];
 
-// 1. INSTALL: Cache the new files
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(ASSETS);
     })
   );
-  self.skipWaiting(); // Forces this new SW to become active immediately
+  self.skipWaiting();
 });
 
-// 2. ACTIVATE: Delete all old versions (v3.0, v4.0, etc)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => {
@@ -27,7 +25,6 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 3. FETCH: Serve from cache
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
