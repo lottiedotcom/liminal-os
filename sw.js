@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v12.0-FINAL-MIX';
+const CACHE_NAME = 'inbetween-v13.0-FINAL-POLISH';
 const ASSETS = [
   './',
   './index.html',
