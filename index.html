@@ -126,11 +126,8 @@
             z-index: 5;
         }
         
-        /* DECAY EFFECTS */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
-        
-        /* MR OTHER EFFECTS */
         .bowing-effect { transform: scale(1.05); }
 
         /* AGITATION LOCK */
@@ -394,91 +391,133 @@
             });
         }
 
-        // --- AUDIO ENGINE ---
+        // --- NOISE & CRUNCH ENGINE ---
         const SystemAudio = {
             ctx: null,
-            hum: null,
-            gainHum: null,
-            noise: null,
-            gainNoise: null,
-            filter: null,
+            whiteNoise: null,
+            pinkNoise: null,
+            brownNoise: null,
+            gainNode: null,
+            activeSource: null,
+            crunchTimer: null,
 
             init() {
                 if (this.ctx) return;
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
                 
-                // HUM SETUP
-                this.hum = this.ctx.createOscillator();
-                this.hum.type = 'sine';
-                this.gainHum = this.ctx.createGain();
-                this.gainHum.gain.value = 0;
-                this.hum.connect(this.gainHum);
-                this.gainHum.connect(this.ctx.destination);
-                this.hum.start();
+                // Create Buffers (3 seconds each)
+                this.whiteNoise = this.createBuffer('white');
+                this.pinkNoise = this.createBuffer('pink');
+                this.brownNoise = this.createBuffer('brown');
 
-                // NOISE SETUP (Static)
-                const bufferSize = 2 * this.ctx.sampleRate;
-                const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
+                this.gainNode = this.ctx.createGain();
+                this.gainNode.gain.value = 0;
+                this.gainNode.connect(this.ctx.destination);
+            },
+
+            createBuffer(type) {
+                const bufferSize = 3 * this.ctx.sampleRate;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = buffer.getChannelData(0);
+                
+                if (type === 'white') {
+                    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+                } 
+                else if (type === 'pink') {
+                    let b0, b1, b2, b3, b4, b5, b6;
+                    b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        let white = Math.random() * 2 - 1;
+                        b0 = 0.99886 * b0 + white * 0.0555179;
+                        b1 = 0.99332 * b1 + white * 0.0750759;
+                        b2 = 0.96900 * b2 + white * 0.1538520;
+                        b3 = 0.86650 * b3 + white * 0.3104856;
+                        b4 = 0.55000 * b4 + white * 0.5329522;
+                        b5 = -0.7616 * b5 - white * 0.0168980;
+                        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                        output[i] *= 0.11; 
+                    }
+                } 
+                else if (type === 'brown') {
+                    let lastOut = 0.0;
+                    for (let i = 0; i < bufferSize; i++) {
+                        let white = Math.random() * 2 - 1;
+                        output[i] = (lastOut + (0.02 * white)) / 1.02;
+                        lastOut = output[i];
+                        output[i] *= 3.5; 
+                    }
                 }
-                this.noise = this.ctx.createBufferSource();
-                this.noise.buffer = noiseBuffer;
-                this.noise.loop = true;
-                this.gainNoise = this.ctx.createGain();
-                this.gainNoise.gain.value = 0;
-                this.filter = this.ctx.createBiquadFilter();
-                this.filter.type = 'lowpass';
-                this.noise.connect(this.filter);
-                this.filter.connect(this.gainNoise);
-                this.gainNoise.connect(this.ctx.destination);
-                this.noise.start();
+                return buffer;
+            },
+
+            playBaseNoise(type) {
+                if (this.activeSource) this.activeSource.stop();
+                
+                let buffer;
+                if(type === 'white') buffer = this.whiteNoise;
+                else if(type === 'brown') buffer = this.brownNoise;
+                else buffer = this.pinkNoise; // Default
+
+                this.activeSource = this.ctx.createBufferSource();
+                this.activeSource.buffer = buffer;
+                this.activeSource.loop = true;
+                this.activeSource.connect(this.gainNode);
+                this.activeSource.start();
+            },
+
+            triggerCrunch() {
+                // Short burst of high-pass filtered white noise
+                const dur = 0.05 + Math.random() * 0.1;
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.whiteNoise;
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 1000 + Math.random() * 2000;
+
+                const gain = this.ctx.createGain();
+                gain.gain.value = 0.2 + (Math.random() * 0.3); // loud pop
+                
+                src.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                src.start();
+                src.stop(this.ctx.currentTime + dur);
             },
 
             updateHum() {
-                if (!this.ctx || !currentId) return;
+                // Determine Noise Color based on Room State
+                if (!currentId) return;
                 const r = world[currentId];
-                const mode = r.time || "Standard";
                 
-                let freq = 60; // Standard hum
-                let vol = 0.1;
-
-                // Temporal Frequencies
-                switch(mode) {
-                    case "Glacial": freq = 35; vol = 0.2; break; // Deep/Slow
-                    case "Rapid": freq = 120; vol = 0.08; break; // High/Anxious
-                    case "Stagnant": freq = 18; vol = 0.05; break; // Hollow
-                    case "Looping": freq = 60; break;
-                    case "Reverse": freq = 50; break;
-                    case "Non-Linear": freq = 440; break; // Tone
-                    default: freq = 60;
+                let noiseType = 'pink'; // Default Neutral
+                if (r.time === 'Glacial' || r.time === 'Stagnant') noiseType = 'brown';
+                if (r.time === 'Rapid' || r.time === 'Reverse') noiseType = 'white';
+                
+                // If noise type changed, restart loop
+                if (!this.activeSource || this.activeSource.buffer !== this[noiseType + 'Noise']) {
+                    this.playBaseNoise(noiseType);
                 }
 
-                // Resonance Warping (Pitch Sag)
-                if (resonance > 0) {
-                    let warp = resonance / 100;
-                    freq = freq * (1 - (warp * 0.25)); // Sag pitch by up to 25%
+                // Volume logic (Static Opacity controls volume)
+                let vol = currentStaticOpacity * 0.4;
+                this.gainNode.gain.setTargetAtTime(vol, this.ctx.currentTime, 0.1);
+
+                // CRUNCH LOGIC
+                // If heavily decayed or resonance high, add crunch
+                if (this.crunchTimer) clearTimeout(this.crunchTimer);
+                
+                if (currentStaticOpacity > 0.3 || resonance > 40) {
+                    let rate = 500 + Math.random() * 2000;
+                    if (currentStaticOpacity > 0.8) rate = 200 + Math.random() * 500; // Frequent crunches
+                    
+                    this.crunchTimer = setTimeout(() => {
+                        this.triggerCrunch();
+                        this.updateHum(); // Loop
+                    }, rate);
                 }
-
-                this.hum.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.5);
-                
-                // Volume fades if static gets too loud/room decays
-                let adjustedVol = vol * (1 - (currentStaticOpacity * 0.5)); 
-                this.gainHum.gain.setTargetAtTime(adjustedVol, this.ctx.currentTime, 0.5);
-            },
-
-            updateNoise(opacity) {
-                if (!this.ctx) return;
-                // Noise volume increases with static opacity
-                this.gainNoise.gain.setTargetAtTime(opacity * 0.15, this.ctx.currentTime, 0.1);
-                
-                // Filter opens as static increases
-                let cutoff = 400 + (opacity * 4000); 
-                this.filter.frequency.setTargetAtTime(cutoff, this.ctx.currentTime, 0.1);
-                
-                this.updateHum(); // Update hum mixing
             }
         };
 
@@ -833,7 +872,7 @@
                 btn.innerText = "SIGNAL UNSTABLE";
             }
 
-            SystemAudio.updateNoise(currentStaticOpacity); // Audio sync
+            SystemAudio.updateHum(); // Audio sync
         }
 
         // --- INTELLIGENT MR OTHER LOGIC ---
@@ -1119,40 +1158,3 @@
     </script>
 </body>
 </html>
-
-<script type="text/javascript">
-const CACHE_NAME = 'inbetween-v3.2';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon.png'
-];
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
-  );
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
-  );
-});
-
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
-  );
-});
-</script>
