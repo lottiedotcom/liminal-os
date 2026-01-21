@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v12.0-BUTTON-FIX';
+const CACHE_NAME = 'inbetween-v12.0-FINAL-MIX';
 const ASSETS = [
   './',
   './index.html',
