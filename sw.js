@@ -1,5 +1,5 @@
-// VERSION v9 - Chaos Grammar & Visual Fix
-const CACHE_NAME = 'inbetween-v9';
+// VERSION v10 - Fast & Smart Update
+const CACHE_NAME = 'inbetween-v10';
 const ASSETS = [
   './',
   './index.html',
