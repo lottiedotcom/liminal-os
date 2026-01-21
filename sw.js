@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v2.5'; 
+const CACHE_NAME = 'inbetween-v3.3';
 const ASSETS = [
   './',
   './index.html',
