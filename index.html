@@ -147,12 +147,8 @@
             90% { opacity: 1; }
             100% { top: 100%; opacity: 0; }
         }
-        
-        .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
-        .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
-        .bowing-effect { transform: scale(1.05); }
 
-        /* AGITATION LOCK */
+        /* AGITATION LOCK (Panic Screen) */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -398,8 +394,6 @@
                 <button class="btn-primary" id="btn-save" onclick="saveRoom()">UPDATE DATABASE</button>
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
-            
-            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()">EMERGENCY FLUSH</button>
         </div>
     </div>
 
@@ -537,23 +531,6 @@
                 if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
                 
                 this.startAmbience(buffer, vol, 0.5);
-            },
-
-            playPurge() {
-                if(!this.ctx) return;
-                const src = this.ctx.createBufferSource();
-                src.buffer = this.brownBuffer;
-                
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
-
-                src.connect(this.masterFilter);
-                src.connect(gain);
-                gain.connect(this.ctx.destination);
-                
-                src.start();
-                src.stop(this.ctx.currentTime + 1.0);
             }
         };
 
@@ -989,6 +966,7 @@
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
+            // Only add visual warping if image is visible
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
@@ -1167,7 +1145,7 @@
 
         function closeEditor() {
             saveRoom();
-            SystemAudio.stopAll();
+            // SWITCH AUDIO BACK TO OS
             SystemAudio.playOSAmbience();
             if(clockInterval) clearInterval(clockInterval);
             document.getElementById('room-editor-view').classList.add('hidden');
@@ -1189,12 +1167,11 @@
             // Only stabilize decay if the image is clear (Opacity near 0)
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
-                // RIPPLE EFFECT & PURGE SOUND
+                // RIPPLE EFFECT ONLY (NO SOUND)
                 let ripple = document.getElementById('scan-ripple');
                 ripple.classList.remove('ripple-anim');
-                void ripple.offsetWidth;
+                void ripple.offsetWidth; 
                 ripple.classList.add('ripple-anim');
-                SystemAudio.playPurge();
             } else {
                 addMrOtherLog("SIGNAL LOST.");
             }
