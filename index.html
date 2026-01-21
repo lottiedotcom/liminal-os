@@ -183,7 +183,7 @@
         .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        input[type="text"], textarea, select {
+        input[type="text"], textarea, select, input[type="number"] {
             background: rgba(255,255,255,0.8); 
             border: 1px solid var(--border); padding: 8px;
             border-radius: 4px; font-family: inherit; color: var(--text); font-size: 12px;
@@ -245,6 +245,8 @@
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         .bowing-effect { transform: scale(1.05); }
+        
+        .loop-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
     </style>
 </head>
 <body onclick="trackInput()">
@@ -301,13 +303,6 @@
             <div class="field-group">
                 <label>Room Name</label>
                 <input type="text" id="inp-name">
-            </div>
-
-            <div class="field-group">
-                <label>Audio Artifact</label>
-                <input type="file" id="inp-audio" accept="audio/*,video/*">
-                <div id="audio-status" style="font-size:10px; color:#718096; margin-top:4px;">NO ARTIFACT FOUND.</div>
-                <button onclick="clearCustomAudio()" style="margin-top:5px; background:transparent; border:1px solid #cbd5e0; font-size:9px; padding:4px;">PURGE ARTIFACT</button>
             </div>
 
             <div class="field-group">
@@ -383,6 +378,23 @@
             </div>
 
             <div class="field-group">
+                <label>Audio Artifact</label>
+                <input type="file" id="inp-audio" accept="audio/*,video/*">
+                <div class="loop-controls">
+                    <div>
+                        <label style="font-size:8px;">START TIME (SEC)</label>
+                        <input type="number" id="inp-audio-start" value="0" min="0" step="0.1" onchange="updateAudioSettings()">
+                    </div>
+                    <div>
+                        <label style="font-size:8px;">LOOP LENGTH (MAX 15s)</label>
+                        <input type="range" id="inp-audio-len" min="1" max="15" value="15" step="0.5" oninput="updateAudioSettings()">
+                    </div>
+                </div>
+                <div id="audio-status" style="font-size:10px; color:#718096; margin-top:4px;">NO ARTIFACT FOUND.</div>
+                <button onclick="clearCustomAudio()" style="margin-top:5px; background:transparent; border:1px solid #cbd5e0; font-size:9px; padding:4px;">PURGE ARTIFACT</button>
+            </div>
+
+            <div class="field-group">
                 <label>Visual Reference</label>
                 <input type="file" id="inp-file" accept="image/*">
                 <input type="hidden" id="inp-img-url">
@@ -416,6 +428,9 @@
             ctx: null, ambienceSrc: null, ambienceGain: null, masterFilter: null,
             pinkBuffer: null, whiteBuffer: null, brownBuffer: null,
             customAudio: null,
+            
+            loopStart: 0,
+            loopDuration: 15,
 
             init() {
                 if (this.ctx) return;
@@ -432,9 +447,13 @@
                 this.ambienceGain.connect(this.masterFilter);
                 this.masterFilter.connect(this.ctx.destination);
                 
-                // Custom Audio Element (Invisible)
                 this.customAudio = document.createElement('audio');
-                this.customAudio.loop = true;
+                this.customAudio.loop = true; 
+                this.customAudio.ontimeupdate = () => {
+                    if(this.customAudio.currentTime >= (this.loopStart + this.loopDuration)) {
+                        this.customAudio.currentTime = this.loopStart;
+                    }
+                };
                 document.body.appendChild(this.customAudio);
             },
 
@@ -467,7 +486,6 @@
 
             startAmbience(buffer, volume, fadeTime = 1.0) {
                 if(!this.ctx) return;
-                // If custom audio is playing, DO NOT start ambience
                 if(this.customAudio && !this.customAudio.paused) return;
 
                 if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); }
@@ -481,14 +499,11 @@
             
             stopAll() {
                 if(!this.ctx) return;
-                // Fade out ambience
                 this.ambienceGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
                 setTimeout(() => { if(this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc.disconnect(); this.ambienceSrc = null; } }, 200);
                 
-                // Stop custom audio
                 if(this.customAudio) {
                     this.customAudio.pause();
-                    this.customAudio.currentTime = 0;
                 }
             },
 
@@ -497,9 +512,10 @@
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
                 
-                // If room has custom audio, ignore the noise generator
                 if(world[currentId].audioData) {
-                    this.playCustom(world[currentId].audioData);
+                    const start = parseFloat(world[currentId].audioStart) || 0;
+                    const len = parseFloat(world[currentId].audioLen) || 15;
+                    this.playCustom(world[currentId].audioData, start, len);
                     return;
                 }
 
@@ -512,22 +528,32 @@
                 this.startAmbience(buffer, vol, 0.5);
             },
             
-            playCustom(src) {
-                // Kill ambience first
+            playCustom(src, start, duration) {
                 if (this.ambienceSrc) { this.ambienceSrc.stop(); this.ambienceSrc = null; }
                 this.ambienceGain.gain.value = 0;
                 
-                this.customAudio.src = src;
+                this.loopStart = start;
+                this.loopDuration = duration;
+                
+                if(this.customAudio.src !== src) {
+                    this.customAudio.src = src;
+                    this.customAudio.currentTime = start;
+                } else {
+                    if(this.customAudio.currentTime < start || this.customAudio.currentTime > start + duration) {
+                        this.customAudio.currentTime = start;
+                    }
+                }
+                
                 this.customAudio.play().catch(e => console.log("Audio play error", e));
             },
             
             playPurge() {
-                // Removed snare sound. Visual ripple only.
+                // No sound
             },
             
             setVolume(level) {
                 if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
-                if(this.customAudio) this.customAudio.volume = Math.min(1, level * 3); // Approximate boost
+                if(this.customAudio) this.customAudio.volume = Math.min(1, level * 3); 
             }
         };
 
@@ -536,7 +562,7 @@
             else { SystemAudio.resume(); }
         });
 
-        // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE (RESTORED) ---
+        // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
             subjects: ["THE STATIC", "IT", "WE", "A GHOST", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "THE PULSE"],
             verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS"],
@@ -951,12 +977,12 @@
                     checkMrOther(r);
                     updateStatic(r.tunerSweetSpot);
 
-                    // FIXED: Always show map button unless critically deep, but even then panic button exists
                     let depth = getDepth(id);
-                    renderBreadcrumbs(id);
                     if (depth >= 3) {
+                        document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
                         document.getElementById('btn-emergency').style.display = "block";
                     } else {
+                        renderBreadcrumbs(id);
                         document.getElementById('btn-emergency').style.display = "none";
                     }
 
@@ -969,11 +995,14 @@
                     document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
                     document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
                     
+                    // LOAD AUDIO SETTINGS
                     if(r.audioData) {
                         document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
                     } else {
                         document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
                     }
+                    document.getElementById('inp-audio-start').value = r.audioStart || 0;
+                    document.getElementById('inp-audio-len').value = r.audioLen || 15;
 
                     updateVisualStats(r);
                     updateMood(r.sensation || "NEUTRAL");
@@ -1104,13 +1133,11 @@
         }
 
         function closeEditor(btn) {
-            // SAFEGUARD: If glitch logic fails, still close.
             try {
                 if(Math.random() > 0.7) {
                     btn.innerText = "STAY";
                     btn.classList.add("crumb-glitch");
                     setTimeout(() => {
-                        // Force back to map regardless of errors
                         btn.innerText = "MAP";
                         btn.classList.remove("crumb-glitch");
                         performClose();
@@ -1118,9 +1145,7 @@
                 } else {
                     performClose();
                 }
-            } catch(e) {
-                performClose();
-            }
+            } catch(e) { performClose(); }
         }
         
         function performClose() {
@@ -1142,6 +1167,8 @@
             r.atmosphere = document.getElementById('inp-atmosphere').value;
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
+            r.audioStart = document.getElementById('inp-audio-start').value;
+            r.audioLen = document.getElementById('inp-audio-len').value;
             
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
@@ -1149,6 +1176,7 @@
                 ripple.classList.remove('ripple-anim');
                 void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
+                SystemAudio.playPurge();
             } else { addMrOtherLog("SIGNAL LOST."); }
 
             document.getElementById('room-img-display').src = r.image || "";
@@ -1186,7 +1214,6 @@
                 if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
                 else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
             });
-            // MOUSE SUPPORT (DESKTOP TESTING)
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => {
@@ -1215,7 +1242,6 @@
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
             
-            // TOUCH SUPPORT (FIXED)
             element.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
@@ -1227,7 +1253,6 @@
                 let y = e.touches[0].clientY;
                 if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) {
                     isDragging = true;
-                    // Visual update
                     element.style.left = (x - 40) + 'px';
                     element.style.top = (y - 50) + 'px';
                 }
@@ -1243,7 +1268,6 @@
                 }
             });
 
-            // MOUSE SUPPORT
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) { isDragging = true; element.style.left = (ev.clientX - 40) + 'px'; element.style.top = (ev.clientY - 50) + 'px'; } };
@@ -1272,6 +1296,16 @@
             document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
             document.getElementById('inp-audio').value = "";
             SystemAudio.updateRoomAmbience();
+            saveMemory();
+        }
+        
+        function updateAudioSettings() {
+            if(!currentId) return;
+            const start = parseFloat(document.getElementById('inp-audio-start').value);
+            const len = parseFloat(document.getElementById('inp-audio-len').value);
+            world[currentId].audioStart = start;
+            world[currentId].audioLen = len;
+            SystemAudio.updateRoomAmbience(); // Refresh to hear changes immediately
             saveMemory();
         }
 
