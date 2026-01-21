@@ -407,7 +407,8 @@
             ctx: null,
             
             // Nodes for OS Hum
-            osOsc: null,
+            osNoiseSrc: null,
+            osFilter: null,
             osGain: null,
             
             // Nodes for Room Ambience
@@ -431,15 +432,22 @@
                 this.whiteBuffer = this.createNoiseBuffer('white');
                 this.brownBuffer = this.createNoiseBuffer('brown');
 
-                // OS Hum Setup (Option A: CRT Whine + 60Hz)
-                this.osOsc = this.ctx.createOscillator();
-                this.osOsc.type = 'sine';
-                this.osOsc.frequency.value = 14000; // High pitch CRT
+                // OS FAN SETUP (White Noise -> LowPass -> Rumble)
+                this.osNoiseSrc = this.ctx.createBufferSource();
+                this.osNoiseSrc.buffer = this.whiteBuffer;
+                this.osNoiseSrc.loop = true;
+                
+                this.osFilter = this.ctx.createBiquadFilter();
+                this.osFilter.type = 'lowpass';
+                this.osFilter.frequency.value = 120; // Super low rumble
+                
                 this.osGain = this.ctx.createGain();
-                this.osGain.gain.value = 0;
-                this.osOsc.connect(this.osGain);
+                this.osGain.gain.value = 0; // Starts silent
+                
+                this.osNoiseSrc.connect(this.osFilter);
+                this.osFilter.connect(this.osGain);
                 this.osGain.connect(this.ctx.destination);
-                this.osOsc.start();
+                this.osNoiseSrc.start();
 
                 // Room Audio Setup (Init empty)
                 this.roomNoiseGain = this.ctx.createGain();
@@ -488,9 +496,9 @@
 
             playOSAmbience() {
                 if(!this.ctx) return;
-                // Fade IN OS, Fade OUT Room
+                // Fade IN OS Fan, Fade OUT Room
                 const t = this.ctx.currentTime;
-                this.osGain.gain.setTargetAtTime(0.02, t, 0.5); // Very quiet CRT
+                this.osGain.gain.setTargetAtTime(0.08, t, 0.5); 
                 this.roomNoiseGain.gain.setTargetAtTime(0, t, 0.2);
                 this.roomHumGain.gain.setTargetAtTime(0, t, 0.2);
                 if(this.roomNoiseSrc) { this.roomNoiseSrc.stop(t+0.5); this.roomNoiseSrc = null; }
@@ -498,7 +506,7 @@
 
             playRoomAmbience() {
                 if(!this.ctx) return;
-                // Fade OUT OS
+                // Fade OUT OS Fan
                 const t = this.ctx.currentTime;
                 this.osGain.gain.setTargetAtTime(0, t, 0.2);
                 this.updateRoomAmbience();
@@ -902,15 +910,24 @@
         function updateStatic(val) {
             if(!currentId) return;
             let r = world[currentId];
+            let sweetSpot = r.tunerSweetSpot;
+            
             let decayFloor = calculateDecay(r) / 100;
-            let distance = Math.abs(val - r.tunerSweetSpot);
-            let tuningOpacity = distance < 5 ? 0 : Math.min(1, (distance - 5) / 40);
+            let distance = Math.abs(val - sweetSpot);
+            
+            let tuningOpacity = 0;
+            if(distance < 5) tuningOpacity = 0;
+            else tuningOpacity = Math.min(1, (distance - 5) / 40);
 
-            currentStaticOpacity = Math.max(tuningOpacity, decayFloor);
-            document.getElementById('static-overlay').style.opacity = currentStaticOpacity;
+            // opacity can't drop below the current decay level
+            let finalOpacity = Math.max(tuningOpacity, decayFloor);
+            currentStaticOpacity = finalOpacity; 
+
+            const overlay = document.getElementById('static-overlay');
+            overlay.style.opacity = finalOpacity;
 
             const img = document.getElementById('room-img-display');
-            if(currentStaticOpacity > 0.2) {
+            if(finalOpacity > 0.2) {
                  if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
                  else img.className = 'decay-dark';
             } else {
