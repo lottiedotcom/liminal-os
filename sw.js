@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v2.1'; // Incrementing version to force reload
+const CACHE_NAME = 'inbetween-v2.5'; 
 const ASSETS = [
   './',
   './index.html',
