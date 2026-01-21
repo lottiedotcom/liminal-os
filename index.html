@@ -118,7 +118,6 @@
         /* FIXED VISUAL EFFECTS */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
-            /* Changed to screen blend mode for visibility on dark images */
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
             opacity: 0; 
             pointer-events: none; 
@@ -589,20 +588,20 @@
             explainTerm(r.reality);
         }
 
-        // --- INTELLIGENT MR OTHER LOGIC (CHAOS GRAMMAR) ---
+        // --- INTELLIGENT MR OTHER LOGIC (FAST & SMART) ---
 
-        // 1. SLOW BURN MATH
+        // 1. FAST BURN MATH
         function updateResonance(r) {
-            // DECAY: Happens faster now if you ignore him (Realism)
+            // DECAY: Slower decay to keep him around longer
             if (r.reality === "GROUNDED" && resonance > 0) resonance -= 0.5;
             
-            // GROWTH: Much slower. It takes many visits to build a bond.
-            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 0.5; // Was 10
-            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 1.0; // Was 15
+            // GROWTH: Boosted significantly for speed
+            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 5; // Was 0.5
+            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 8; // Was 1.0
             
-            // He likes specific items, but only a little bit at a time
+            // Item Boost
             let items = (r.remnants || []).join(" ").toLowerCase();
-            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 2.0;
+            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 15;
 
             // Cap resonance
             if (resonance > 100) resonance = 100;
@@ -611,19 +610,17 @@
             saveMemory();
         }
 
-        // 2. THE VISUAL & AUDIO CHECK
+        // 2. THE VISUAL CHECK
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            const tuner = document.getElementById('static-tuner');
             
             // Reset visuals first
             img.className = "";
             
-            // If user hasn't touched the slider manually, we control it based on resonance
-            if(resonance > 60) {
+            if(resonance > 40) {
                 img.classList.add('bowing-effect');
             }
-            if(resonance > 90) {
+            if(resonance > 80) {
                 img.classList.add('dark-mode');
             }
         }
@@ -636,17 +633,36 @@
             overlay.style.opacity = opacity;
         }
 
-        // 4. THE CHAOS GRAMMAR ENGINE (Mr. Other's Brain)
+        // 4. THE CHAOS GRAMMAR ENGINE (MEGA DICTIONARY)
         const VOCAB = {
-            subjects: ["THE STATIC", "YOUR SHADOW", "THE WALLS", "TIME", "WE", "IT", "THE HUNGER", "A GHOST"],
-            verbs: ["CONSUMES", "WATCHES", "REMEMBERS", "HATES", "LOVES", "BECOMES", "ROTATES", "MIMICS"],
-            objects: ["THE SIGNAL", "YOUR BREATH", "THE EXIT", "THE COLD", "MEMORY", "THE LIGHT", "YOU"],
-            adjectives: ["HOLLOW", "LOUD", "WRONG", "INFINITE", "DEAD", "WAITING", "BROKEN"],
+            subjects: [
+                "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
+                "THE ROOM", "THE WALLS", "THE CEILING", "THE FLOOR", "GRAVITY", "THE LIGHT", "THE DARKNESS", 
+                "THE REFLECTION", "TIME", "MEMORY", "THE PAST", "YOUR FUTURE", "THE END", "SILENCE", "THE SIGNAL"
+            ],
+            verbs: [
+                "CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES",
+                "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES",
+                "BUFFERS", "GLITCHES", "RENDERS", "CORRUPTS", "LOOPS", "REPEATS", "FAILS",
+                "ROTATES", "BLEEDS", "FREEZES", "SHIVERS", "DROPS", "EXPANDS", "COLLAPSES"
+            ],
+            objects: [
+                "YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "YOUR SKIN", "YOUR EYES", "YOUR VOICE",
+                "THE EXIT", "THE ENTRY", "HOPE", "FEAR", "PAIN", "JOY", "THE TRUTH", "A LIE",
+                "THE BLOOD", "THE GLASS", "THE ICE", "THE DUST", "THE BONE", "THE TEETH", "THE WIRES"
+            ],
+            adjectives: [
+                "HOLLOW", "INFINITE", "EMPTY", "WRONG", "TRANSITIONAL", "STUCK", "LOST", "LIMINAL",
+                "NUMB", "FROZEN", "PALE", "BLUE", "SHIVERING", "CRYSTALLINE", "BRITTLE",
+                "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED",
+                "RENDERED", "DIGITAL", "STATIC", "NULL", "VOID", "UNREAL"
+            ],
             
-            // Context-Specific Words
-            fear_words: ["THE TREMBLING", "YOUR FEAR", "PANIC", "THE SCREAM"],
-            location_words: ["THIS ROOM", "THE FLOOR", "THE CEILING", "THE DOOR"],
-            self_words: ["YOUR FACE", "THE MIRROR", "THE SKIN", "THE EYES"]
+            // CONTEXT TRIGGERS
+            fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
+            location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
+            self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR"],
+            winter_words: ["THE BLIZZARD", "ZERO KELVIN", "HYPOTHERMIA", "THE WHITE", "DEEP WINTER", "THE FROST"]
         };
 
         function generateSentence(context) {
@@ -656,6 +672,7 @@
             if (context === "fear") s = getRandom(VOCAB.fear_words);
             else if (context === "location") s = getRandom(VOCAB.location_words);
             else if (context === "self") s = getRandom(VOCAB.self_words);
+            else if (context === "winter") s = getRandom(VOCAB.winter_words);
             else s = getRandom(VOCAB.subjects);
 
             v = getRandom(VOCAB.verbs);
@@ -671,10 +688,10 @@
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
-        // 5. THE ANALYZER (Intuitive Listener)
+        // 5. THE ANALYZER (Fast Response)
         function analyzeJournalInput(text) {
-            if (resonance < 30) return; // Too weak to speak
-            if (Math.random() > 0.85) return; // Sometimes he ignores you
+            if (resonance < 10) return; // Low threshold so he talks sooner
+            if (Math.random() > 0.90) return; // Only 10% chance to ignore (Very active)
 
             const input = text.toLowerCase();
             let context = "neutral";
@@ -683,20 +700,19 @@
             if (input.includes("scared") || input.includes("dark") || input.includes("run") || input.includes("help")) context = "fear";
             else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
             else if (input.includes("i am") || input.includes("me") || input.includes("my") || input.includes("face")) context = "self";
+            else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter") || input.includes("white")) context = "winter";
 
-            // Generate a UNIQUE reply
             let reply = generateSentence(context);
 
-            // Occasional "Glitch" Override (Direct hard-coded creepiness)
+            // Occasional "Glitch" Override
             if (Math.random() < 0.1) {
                 const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN."];
                 reply = glitches[Math.floor(Math.random() * glitches.length)];
             }
 
-            // Send with delay
             setTimeout(() => {
                 addMrOtherLog(reply);
-            }, 2000 + Math.random() * 3000);
+            }, 2000 + Math.random() * 2000); // 2-4 seconds delay
         }
 
         function addMrOtherLog(text) {
