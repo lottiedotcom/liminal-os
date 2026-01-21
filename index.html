@@ -105,10 +105,9 @@
             display: flex; align-items: center; padding: 0 15px; gap: 5px;
             font-size: 10px; font-weight: bold; color: #a0aec0; overflow-x: auto;
             backdrop-filter: blur(5px);
-            z-index: 100; /* Ensuring high Z-Index so it is clickable */
         }
         .crumb { color: var(--accent); cursor: pointer; text-transform: uppercase; transition: color 0.1s; }
-        .crumb-glitch { color: var(--danger) !important; font-family: var(--mono); font-weight: 900; }
+        .crumb-glitch { color: var(--danger) !important; font-family: var(--mono); }
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
         .crumb-lost { color: var(--danger); font-family: var(--mono); letter-spacing: 2px; }
@@ -132,24 +131,10 @@
             transition: opacity 0.2s;
             display: flex; align-items: center; justify-content: center;
         }
-        
         #transition-text {
             color: #fff; font-family: var(--mono); font-size: 14px; 
             letter-spacing: 4px; text-transform: uppercase; opacity: 0.8;
             text-shadow: 0 0 10px var(--accent);
-        }
-
-        .scan-ripple {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, transparent 0%, rgba(56, 178, 172, 0.8) 50%, transparent 100%);
-            opacity: 0; z-index: 50; pointer-events: none;
-        }
-        .ripple-anim { animation: scanDown 1.5s cubic-bezier(0.4, 0.0, 0.2, 1); }
-        @keyframes scanDown {
-            0% { top: -100%; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
         }
 
         /* AGITATION LOCK */
@@ -260,6 +245,18 @@
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         .bowing-effect { transform: scale(1.05); }
+        .scan-ripple {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, transparent 0%, rgba(56, 178, 172, 0.8) 50%, transparent 100%);
+            opacity: 0; z-index: 50; pointer-events: none;
+        }
+        .ripple-anim { animation: scanDown 1.5s cubic-bezier(0.4, 0.0, 0.2, 1); }
+        @keyframes scanDown {
+            0% { top: -100%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
     </style>
 </head>
 <body onclick="trackInput()">
@@ -520,12 +517,10 @@
 
         // --- CONTEXT-AWARE CHAOS GRAMMAR ENGINE ---
         const VOCAB = {
-            // General
             subjects: ["THE STATIC", "IT", "WE", "A GHOST", "THE SHADOW", "THE CODE", "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "THE PULSE"],
             verbs: ["CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES", "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES", "CRAVES", "KEEPS", "LOCKS", "WORSHIPS"],
             objects: ["YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "THE EXIT", "HOPE", "FEAR", "THE TRUTH", "A LIE", "THE BLOOD", "THE GLASS", "FOREVER", "US"],
             
-            // Specific Themes
             winter_nouns: ["THE BLIZZARD", "BLACK ICE", "THE FROST", "A SHIVER", "THE COLD", "WHITE NOISE"],
             winter_verbs: ["FREEZES", "NUMBS", "BITES", "SLOWS", "COVERS", "HIDES"],
             
@@ -637,6 +632,7 @@
                 // OBSESSIVE EDITOR
                 text = text.replace(/\bI\b/g, "WE").replace(/\bmy\b/gi, "OUR"); 
                 text = text.replace(/leave/gi, "STAY").replace(/exit/gi, "HOME").replace(/escape/gi, "STAY"); 
+                
                 return text;
             },
             
@@ -704,7 +700,7 @@
             SystemAudio.init(); 
             if(SystemAudio.ctx) SystemAudio.ctx.resume();
             SystemAudio.playOSAmbience();
-            MrOtherAI.init(); 
+            MrOtherAI.init(); // GHOST START
             
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
@@ -777,6 +773,7 @@
         function renderMap() {
             const map = document.getElementById('map-view');
             map.innerHTML = ""; 
+            
             let sysBtn = document.createElement('div');
             sysBtn.className = 'btn-system-data';
             sysBtn.innerText = "[ SYSTEM ]";
@@ -868,13 +865,20 @@
             }
         }
 
+        function getDepth(id) {
+            let depth = 0;
+            let curr = world[id];
+            while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
+            return depth;
+        }
+
         function generateDistortedWelcome() {
             const phrases = ["W E L C O M E", "w.e.l.c.o.m.e.", "// WELCOME //", "W-E-L-C-O-M-E", "welcome.", "> welcome_user"];
             return phrases[Math.floor(Math.random() * phrases.length)];
         }
 
         function emergencyFlush() {
-            try { SystemAudio.stopAll(); } catch(e){}
+            SystemAudio.stopAll();
             const ts = document.getElementById('transition-screen');
             ts.style.opacity = "1";
             setTimeout(() => {
@@ -882,12 +886,12 @@
                 document.getElementById('map-view').classList.remove('hidden');
                 document.getElementById('room-editor-view').classList.add('hidden');
                 renderMap();
-                try { SystemAudio.playOSAmbience(); } catch(e){}
+                SystemAudio.playOSAmbience();
             }, 1000);
         }
 
         function enterRoom(id) {
-            try { SystemAudio.stopAll(); } catch(e){}
+            SystemAudio.stopAll();
             const welcomeText = generateDistortedWelcome();
             document.getElementById('transition-text').innerText = welcomeText;
             const ts = document.getElementById('transition-screen');
@@ -902,7 +906,7 @@
                     if(r.tunerSweetSpot === undefined) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
                     r.lastVisited = Date.now();
-                    try { SystemAudio.updateRoomAmbience(); } catch(e){}
+                    SystemAudio.updateRoomAmbience();
                     document.getElementById('static-tuner').value = r.tunerSweetSpot;
                     
                     updateResonance(r);
@@ -989,13 +993,6 @@
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
-        function getDepth(id) {
-            let depth = 0;
-            let curr = world[id];
-            while (curr && curr.parentId) { depth++; curr = world[curr.parentId]; }
-            return depth;
-        }
-
         function addMrOtherLog(text) {
             if(!currentId) return;
             if(!world[currentId].journal) world[currentId].journal = [];
@@ -1051,27 +1048,19 @@
             let path = []; let curr = world[id];
             while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; }
             let nav = document.getElementById('nav-bar');
-            
-            // Generate standard "MAP" button
-            let mapBtn = document.createElement('span');
-            mapBtn.className = 'crumb';
-            mapBtn.innerText = "MAP";
-            mapBtn.onclick = function() { closeEditor(this); };
-            
-            nav.innerHTML = "";
-            nav.appendChild(mapBtn);
-            
-            path.forEach(node => { 
-                nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; 
-            });
+            nav.innerHTML = `<span class="crumb" onclick="closeEditor(this)">MAP</span>`;
+            path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; });
         }
 
         function closeEditor(btn) {
-            if(Math.random() > 0.5) { // 50% chance to glitch
+            // DESPERATE ARCHITECT (GLITCH ON EXIT)
+            if(Math.random() > 0.7) {
                 btn.innerText = "STAY";
                 btn.classList.add("crumb-glitch");
                 setTimeout(() => {
-                    performClose(); // Force exit even after glitch
+                    btn.innerText = "MAP";
+                    btn.classList.remove("crumb-glitch");
+                    performClose();
                 }, 500);
             } else {
                 performClose();
@@ -1079,12 +1068,9 @@
         }
         
         function performClose() {
-            try {
-                saveRoom();
-                SystemAudio.stopAll();
-                SystemAudio.playOSAmbience();
-            } catch(e) {}
-            
+            saveRoom();
+            SystemAudio.stopAll();
+            SystemAudio.playOSAmbience();
             if(clockInterval) clearInterval(clockInterval);
             document.getElementById('room-editor-view').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
@@ -1107,7 +1093,7 @@
                 ripple.classList.remove('ripple-anim');
                 void ripple.offsetWidth;
                 ripple.classList.add('ripple-anim');
-                try { SystemAudio.playPurge(); } catch(e){}
+                SystemAudio.playPurge();
             } else { addMrOtherLog("SIGNAL LOST."); }
 
             document.getElementById('room-img-display').src = r.image || "";
@@ -1145,7 +1131,7 @@
                 if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
                 else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
             });
-            // MOUSE SUPPORT
+            // MOUSE SUPPORT (DESKTOP TESTING)
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
                 document.onmousemove = (ev) => {
@@ -1174,13 +1160,13 @@
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
             element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = false; });
-            element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) isDragging = true; });
+            element.addEventListener('touchmove', (e) => { if(Math.abs(e.touches[0].clientX - startX) > 5) { isDragging = true; element.style.left = (e.touches[0].clientX - 40) + 'px'; element.style.top = (e.touches[0].clientY - 50) + 'px'; } });
             element.addEventListener('touchend', () => { if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } });
             
             // MOUSE SUPPORT
             element.onmousedown = (e) => {
                 startX = e.clientX; isDragging = false;
-                document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) isDragging = true; };
+                document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) { isDragging = true; element.style.left = (ev.clientX - 40) + 'px'; element.style.top = (ev.clientY - 50) + 'px'; } };
                 document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } };
             };
         }
