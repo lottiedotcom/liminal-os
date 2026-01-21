@@ -31,7 +31,7 @@
         /* --- 2. BOOT SCREEN --- */
         #boot-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 9999;
+            background: #fff; z-index: 10001; /* Highest Priority */
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             letter-spacing: 2px; cursor: pointer;
         }
@@ -60,17 +60,18 @@
             cursor: pointer; letter-spacing: 1px;
         }
 
-        /* DATA MODAL */
+        /* DATA MODAL (Fix: Z-Index increased to sit above everything) */
         #data-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95); z-index: 200;
+            background: rgba(255,255,255,0.98); z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 15px;
         }
         .data-btn {
-            width: 200px; padding: 15px; background: #fff; border: 1px solid var(--border);
+            width: 250px; padding: 15px; background: #fff; border: 1px solid var(--border);
             color: var(--text); font-weight: bold; cursor: pointer; text-transform: uppercase;
             font-size: 11px; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 5px;
         }
 
         /* Map Icons */
@@ -129,8 +130,6 @@
         /* DECAY EFFECTS */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
-        
-        /* MR OTHER EFFECTS */
         .bowing-effect { transform: scale(1.05); }
 
         /* AGITATION LOCK (Panic Screen) */
@@ -241,7 +240,7 @@
         }
     </style>
 </head>
-<body onclick="trackInput()">
+<body>
 
     <div id="boot-screen" onclick="bootUp()">
         <h2 style="font-weight: 300; letter-spacing: 4px;">THE INBETWEEN</h2>
@@ -257,9 +256,9 @@
         
         <div id="data-menu-buttons" style="display:flex; flex-direction:column; gap:15px;">
             <button class="data-btn" onclick="showLexicon()">VIEW LEXICON (DICTIONARY)</button>
-            <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
-            <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
-            <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
+            <button class="data-btn" onclick="exportData(event)">EXPORT BACKUP (.json)</button>
+            <button class="data-btn" onclick="triggerImport(event)">IMPORT BACKUP</button>
+            <button class="data-btn" style="color:#e53e3e;" onclick="resetData(event)">RESET WORLD</button>
             <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
         </div>
 
@@ -467,11 +466,15 @@
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
+            
+            // Add Safety Listener for clicks
+            document.body.addEventListener('click', safeTrackInput, true);
+            
             renderMap();
             initMetaTriggers();
         }
 
-        // --- META TRIGGERS ---
+        // --- META TRIGGERS (FIXED SAFETY) ---
         function initMetaTriggers() {
             if(navigator.getBattery) {
                 navigator.getBattery().then(function(battery) {
@@ -505,8 +508,12 @@
             }, 60000);
         }
 
-        function trackInput() {
+        function safeTrackInput(e) {
             idleTimer = 0;
+            
+            // IGNORE CLICKS INSIDE SYSTEM MENU FROM AGITATION
+            if(e.target.closest('#data-modal')) return;
+
             clickCount++;
             if(!clickResetTimer) {
                 clickResetTimer = setTimeout(() => { clickCount = 0; clickResetTimer = null; }, 1000);
@@ -618,7 +625,9 @@
             document.getElementById('data-menu-buttons').classList.remove('hidden');
         }
 
-        function exportData() {
+        // --- FIXED EXPORT/IMPORT ---
+        function exportData(e) {
+            if(e) e.stopPropagation();
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
             let node = document.createElement('a');
             node.setAttribute("href", dataStr);
@@ -626,6 +635,11 @@
             document.body.appendChild(node);
             node.click();
             node.remove();
+        }
+
+        function triggerImport(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('import-file').click();
         }
 
         function importData(input) {
@@ -644,7 +658,8 @@
             reader.readAsText(file);
         }
 
-        function resetData() {
+        function resetData(e) {
+            if(e) e.stopPropagation();
             if(confirm("Wipe all worlds?")) {
                 world = JSON.parse(JSON.stringify(defaultWorld));
                 resonance = 0;
@@ -671,7 +686,6 @@
             let decay = calculateDecay(r);
             
             // INITIAL VISUAL SETUP
-            // We force updateStatic to calculate based on Sweet Spot
             updateStatic(randomStart);
 
             document.getElementById('map-view').classList.add('hidden');
@@ -701,26 +715,22 @@
             explainTerm(r.reality);
         }
 
-        // --- ORGANIC DECAY LOGIC (4 Hours + Random) ---
         function calculateDecay(r) {
             if(!r.lastVisited) {
                 r.lastVisited = Date.now();
                 return 0;
             }
             let diff = Date.now() - r.lastVisited;
-            
-            // 4 Hours (14,400,000 ms) = 100% Decay
+            // 4 Hours = 100% Decay
             let timeDecay = (diff / (1000 * 60 * 60 * 4)) * 100;
             
-            // RANDOMNESS: Add noise so it's not linear
-            // Use room ID to create a consistent random seed, or just simple Math.random if transient
+            // Randomness
             let noise = 1.0; 
-            if(r.id) noise = 0.8 + (parseInt(r.id.slice(-2)) / 100); // Slight variance based on ID
+            if(r.id) noise = 0.8 + (parseInt(r.id.slice(-2)) / 100);
             
             let finalDecay = Math.floor(timeDecay * noise);
             
-            // THRESHOLD: Don't show decay if it's less than 25% (Integrity Buffer)
-            if(finalDecay < 25) return 0;
+            if(finalDecay < 25) return 0; // Threshold
             
             return Math.min(100, finalDecay);
         }
@@ -731,30 +741,26 @@
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
             
-            // Calculate Distance from Sweet Spot
             let distance = Math.abs(val - sweetSpot);
             
-            // Map distance (0-100) to Opacity (0.0 - 1.0)
             let opacity = 0;
             if(distance < 5) opacity = 0;
             else opacity = Math.min(1, (distance - 5) / 40);
 
-            currentStaticOpacity = opacity; // Global var to check later
+            currentStaticOpacity = opacity;
 
             const overlay = document.getElementById('static-overlay');
             overlay.style.opacity = opacity;
 
-            // Apply Decay Filters only if static is present (Unstable Signal)
+            // Apply Decay Filters
             const img = document.getElementById('room-img-display');
-            
-            // If decay is happening (calculated separately), apply visual filter
             let currentDecay = calculateDecay(r);
             
             if(opacity > 0.2 || currentDecay > 25) {
                  if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) img.className = 'decay-bright';
                  else img.className = 'decay-dark';
             } else {
-                 img.className = ""; // Clear filters when tuned AND fresh
+                 img.className = ""; 
             }
             
             // Visual Feedback on Button
@@ -790,8 +796,13 @@
 
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
-            // Only add visual warping if image is visible
             if(resonance > 50) img.classList.add('bowing-effect');
+        }
+
+        function updateStatic(val) {
+            const overlay = document.getElementById('static-overlay');
+            let opacity = (val / 100) * 0.8;
+            overlay.style.opacity = opacity;
         }
 
         // --- CHAOS GRAMMAR ENGINE (NO SCIENCE WORDS) ---
@@ -821,7 +832,6 @@
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
-            // Replaced Kelvin/Science words with poetic winter words
             winter_words: ["THE BLIZZARD", "THE NUMBNESS", "BLACK ICE", "THE WHITE", "DEEP WINTER", "THE FROST", "THE SHIVER"],
             love_words: ["THE BOND", "THE OBSESSION", "THE LOCK", "THE KEY", "THE VEIN"]
         };
@@ -987,11 +997,9 @@
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
             
-            // Only stabilize decay if the image is clear (Opacity near 0)
             if(currentStaticOpacity < 0.1) {
                 r.lastVisited = Date.now();
             } else {
-                // If they save with bad signal, decay continues/doesn't reset
                 addMrOtherLog("SIGNAL LOST.");
             }
 
