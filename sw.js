@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v7.0-HAUNTED';
+const CACHE_NAME = 'inbetween-v8.0-HAUNTED';
 const ASSETS = [
   './',
   './index.html',
