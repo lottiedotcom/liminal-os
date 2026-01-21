@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v9.0-OUIJA';
+const CACHE_NAME = 'inbetween-v10.0-INTUITIVE';
 const ASSETS = [
   './',
   './index.html',
