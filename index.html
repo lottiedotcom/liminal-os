@@ -9,36 +9,27 @@
     <meta name="theme-color" content="#f0f8ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Inbetween">
     <link rel="apple-touch-icon" href="icon.png">
 
     <style>
-        /* --- 1. CLINICAL LIMINAL THEME --- */
         :root {
-            --bg: #f0f8ff;             /* Alice Blue */
-            --text: #2d3748;           /* Slate */
-            --accent: #38b2ac;         /* Teal */
-            --accent-fade: #e6fffa;    /* Light Teal */
-            --border: #cbd5e0;
-            --danger: #e53e3e;         /* Red for Mr. Other */
+            --bg: #f0f8ff; --text: #2d3748; --accent: #38b2ac; 
+            --accent-fade: #e6fffa; --border: #cbd5e0; --danger: #e53e3e;
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
-
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; touch-action: none; }
         .hidden { display: none !important; }
 
-        /* --- 2. BOOT SCREEN --- */
         #boot-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 10001; /* Highest Priority */
+            background: #fff; z-index: 10001;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             letter-spacing: 2px; cursor: pointer;
         }
         .pulse { animation: pulse 3s infinite; color: var(--accent); font-size: 11px; margin-top: 15px; font-weight: bold; letter-spacing: 3px;}
         @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
-        /* --- 3. MAP VIEW --- */
         #map-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(180deg, #d4fcff 0%, #ffffff 80%);
@@ -60,10 +51,10 @@
             cursor: pointer; letter-spacing: 1px;
         }
 
-        /* DATA MODAL (Fix: Z-Index increased to sit above everything) */
+        /* DATA MODAL - NOW A SAFE ZONE */
         #data-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.98); z-index: 10000;
+            background: rgba(255,255,255,0.98); z-index: 20000; /* Highest Z-Index */
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 15px;
         }
@@ -74,7 +65,6 @@
             margin-bottom: 5px;
         }
 
-        /* Map Icons */
         .map-icon {
             width: 80px; height: 100px; position: absolute;
             display: flex; flex-direction: column; align-items: center;
@@ -91,11 +81,9 @@
             padding: 3px 8px; border-radius: 8px; color: var(--text); text-transform: uppercase; letter-spacing: 1px;
         }
 
-        /* --- 4. EDITOR VIEW --- */
         #room-editor-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; 
-            z-index: 20; display: flex; flex-direction: column;
+            background: #fff; z-index: 20; display: flex; flex-direction: column;
             transition: background 1.5s ease-in-out;
         }
 
@@ -109,30 +97,22 @@
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
 
-        /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
             border-bottom: 4px solid var(--accent); overflow: hidden;
         }
         #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.2s ease; }
         
-        /* STATIC OVERLAY */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 1; 
-            pointer-events: none; 
-            mix-blend-mode: screen; 
-            transition: opacity 0.1s;
-            z-index: 5;
+            opacity: 1; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.1s; z-index: 5;
         }
         
-        /* DECAY EFFECTS */
         .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
         .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         .bowing-effect { transform: scale(1.05); }
 
-        /* AGITATION LOCK (Panic Screen) */
         #agitation-lock {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #fff; z-index: 9999; display: none;
@@ -140,7 +120,6 @@
             font-weight: bold; letter-spacing: 5px; color: var(--text);
         }
 
-        /* STATIC TUNER */
         #static-tuner-container {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
             width: 60%; display: flex; align-items: center; gap: 10px;
@@ -154,40 +133,32 @@
             position: absolute; top: 15px; left: 15px; 
             background: rgba(255,255,255,0.9); padding: 5px 10px; border-radius: 4px; 
             font-size: 9px; font-weight: bold; color: var(--text);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 90%; text-transform: uppercase;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 90%; text-transform: uppercase;
         }
 
         #liminal-clock {
             position: absolute; top: 15px; right: 15px;
             background: rgba(255,255,255,0.8); padding: 5px 10px; border-radius: 4px;
             font-family: var(--mono); font-size: 12px; font-weight: bold; color: var(--text);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            letter-spacing: 1px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); letter-spacing: 1px;
         }
 
         #editor-controls {
-            height: 55%; 
-            background: transparent; 
-            padding: 20px;
+            height: 55%; background: transparent; padding: 20px;
             display: flex; flex-direction: column; gap: 12px; overflow-y: auto;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
-            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); padding-bottom: env(safe-area-inset-bottom);
         }
 
         .field-group { display: flex; flex-direction: column; gap: 4px; }
         label { font-size: 9px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
         
         input[type="text"], textarea, select {
-            background: rgba(255,255,255,0.8); 
-            border: 1px solid var(--border); padding: 8px;
+            background: rgba(255,255,255,0.8); border: 1px solid var(--border); padding: 8px;
             border-radius: 4px; font-family: inherit; color: var(--text); font-size: 12px;
-            width: 100%; box-sizing: border-box;
-            backdrop-filter: blur(2px);
+            width: 100%; box-sizing: border-box; backdrop-filter: blur(2px);
         }
         input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
 
-        /* GHOST BOX / INTERPRETER */
         #interpreter-bar {
             font-family: var(--mono); font-size: 11px; color: var(--accent);
             text-transform: uppercase; margin-top: 8px; min-height: 14px;
@@ -196,11 +167,9 @@
             border-left: 3px solid var(--accent);
         }
 
-        /* LIVING JOURNAL */
         #journal-container {
             background: rgba(255,255,255,0.5); border: 1px solid var(--border);
-            border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;
-            height: 150px;
+            border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; height: 150px;
         }
         #journal-feed {
             flex-grow: 1; overflow-y: auto; padding: 10px; 
@@ -212,16 +181,11 @@
         .log-edited { text-decoration: line-through; opacity: 0.6; }
         .log-new { font-weight: bold; color: var(--danger); }
 
-        #journal-input-area {
-            display: flex; border-top: 1px solid var(--border);
-        }
+        #journal-input-area { display: flex; border-top: 1px solid var(--border); }
         #inp-journal { border: none; background: #fff; border-radius: 0; }
         #btn-journal { border: none; background: var(--text); color: #fff; width: 50px; cursor: pointer; font-weight: bold; }
 
-        /* DIAGNOSTICS GRID */
-        .diag-grid {
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
-        }
+        .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
         .diag-grid select { font-size: 10px; padding: 6px; }
 
         .tag-wrapper { display: flex; gap: 5px; }
@@ -240,7 +204,7 @@
         }
     </style>
 </head>
-<body>
+<body onclick="trackInput(event)">
 
     <div id="boot-screen" onclick="bootUp()">
         <h2 style="font-weight: 300; letter-spacing: 4px;">THE INBETWEEN</h2>
@@ -251,14 +215,14 @@
 
     <div id="map-view" class="hidden"></div>
 
-    <div id="data-modal" class="hidden">
+    <div id="data-modal" class="hidden" onclick="event.stopPropagation()">
         <h3 style="letter-spacing: 2px; color: #718096;">SYSTEM DATA</h3>
         
         <div id="data-menu-buttons" style="display:flex; flex-direction:column; gap:15px;">
             <button class="data-btn" onclick="showLexicon()">VIEW LEXICON (DICTIONARY)</button>
-            <button class="data-btn" onclick="exportData(event)">EXPORT BACKUP (.json)</button>
-            <button class="data-btn" onclick="triggerImport(event)">IMPORT BACKUP</button>
-            <button class="data-btn" style="color:#e53e3e;" onclick="resetData(event)">RESET WORLD</button>
+            <button class="data-btn" onclick="exportData()">EXPORT BACKUP (.json)</button>
+            <button class="data-btn" onclick="document.getElementById('import-file').click()">IMPORT BACKUP</button>
+            <button class="data-btn" style="color:#e53e3e;" onclick="resetData()">RESET WORLD</button>
             <button class="data-btn" onclick="toggleDataMenu()">CLOSE</button>
         </div>
 
@@ -393,7 +357,6 @@
             });
         }
 
-        // APP LOGIC
         let defaultWorld = {
             "origin": { 
                 id: "origin", parentId: null, name: "The Lobby", 
@@ -407,14 +370,12 @@
         let resonance = 0; 
         let currentId = null;
         let clockInterval = null;
-        
         let idleTimer = 0;
         let clickCount = 0;
         let clickResetTimer = null;
         let batteryLevel = 1.0;
         let currentStaticOpacity = 1.0;
 
-        // DICTIONARY DEFINITIONS (INTERPRETER)
         const LEXICON = {
             "GROUNDED": "1:1 with baseline reality. Stable.",
             "TRANSITIONAL": "A space of movement. Not a destination.",
@@ -466,15 +427,10 @@
             loadMemory();
             document.getElementById('boot-screen').classList.add('hidden');
             document.getElementById('map-view').classList.remove('hidden');
-            
-            // Add Safety Listener for clicks
-            document.body.addEventListener('click', safeTrackInput, true);
-            
             renderMap();
             initMetaTriggers();
         }
 
-        // --- META TRIGGERS (FIXED SAFETY) ---
         function initMetaTriggers() {
             if(navigator.getBattery) {
                 navigator.getBattery().then(function(battery) {
@@ -508,12 +464,11 @@
             }, 60000);
         }
 
-        function safeTrackInput(e) {
-            idleTimer = 0;
-            
-            // IGNORE CLICKS INSIDE SYSTEM MENU FROM AGITATION
-            if(e.target.closest('#data-modal')) return;
+        // FIXED TRACK INPUT - IGNORES MENU CLICKS
+        function trackInput(e) {
+            if(e && e.target.closest('#data-modal')) return; // STOP IF CLICKING MENU
 
+            idleTimer = 0;
             clickCount++;
             if(!clickResetTimer) {
                 clickResetTimer = setTimeout(() => { clickCount = 0; clickResetTimer = null; }, 1000);
@@ -531,7 +486,6 @@
             setTimeout(() => { lock.style.display = "none"; }, 3000);
         }
 
-        // --- CLOCK & RENDER LOGIC ---
         function startClock() {
             if(clockInterval) clearInterval(clockInterval);
             let glacialMinutes = 0;
@@ -625,9 +579,7 @@
             document.getElementById('data-menu-buttons').classList.remove('hidden');
         }
 
-        // --- FIXED EXPORT/IMPORT ---
-        function exportData(e) {
-            if(e) e.stopPropagation();
+        function exportData() {
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(world));
             let node = document.createElement('a');
             node.setAttribute("href", dataStr);
@@ -635,11 +587,6 @@
             document.body.appendChild(node);
             node.click();
             node.remove();
-        }
-
-        function triggerImport(e) {
-            if(e) e.stopPropagation();
-            document.getElementById('import-file').click();
         }
 
         function importData(input) {
@@ -658,8 +605,7 @@
             reader.readAsText(file);
         }
 
-        function resetData(e) {
-            if(e) e.stopPropagation();
+        function resetData() {
             if(confirm("Wipe all worlds?")) {
                 world = JSON.parse(JSON.stringify(defaultWorld));
                 resonance = 0;
@@ -675,17 +621,13 @@
             
             if(!r.tunerSweetSpot) r.tunerSweetSpot = Math.floor(Math.random() * 100);
 
-            // Set Tuner to 0 or random distant value to FORCE tuning
             let randomStart = Math.random() > 0.5 ? 0 : 100;
             document.getElementById('static-tuner').value = randomStart;
             
             updateResonance(r);
             checkMrOther(r);
             
-            // Calculate DECAY (Time passed)
             let decay = calculateDecay(r);
-            
-            // INITIAL VISUAL SETUP
             updateStatic(randomStart);
 
             document.getElementById('map-view').classList.add('hidden');
@@ -715,32 +657,28 @@
             explainTerm(r.reality);
         }
 
+        // FIXED DECAY CALCULATION TO PREVENT CRASH
         function calculateDecay(r) {
             if(!r.lastVisited) {
                 r.lastVisited = Date.now();
                 return 0;
             }
             let diff = Date.now() - r.lastVisited;
-            // 4 Hours = 100% Decay
             let timeDecay = (diff / (1000 * 60 * 60 * 4)) * 100;
             
-            // Randomness
             let noise = 1.0; 
-            if(r.id) noise = 0.8 + (parseInt(r.id.slice(-2)) / 100);
+            // Fix: Check if ID exists and has length before slicing
+            if(r.id && r.id.length > 2) noise = 0.8 + (parseInt(r.id.slice(-2)) / 100);
             
             let finalDecay = Math.floor(timeDecay * noise);
-            
-            if(finalDecay < 25) return 0; // Threshold
-            
+            if(finalDecay < 25) return 0;
             return Math.min(100, finalDecay);
         }
 
-        // --- NEW TUNING LOGIC ---
         function updateStatic(val) {
             if(!currentId) return;
             let r = world[currentId];
             let sweetSpot = r.tunerSweetSpot || 50;
-            
             let distance = Math.abs(val - sweetSpot);
             
             let opacity = 0;
@@ -752,7 +690,6 @@
             const overlay = document.getElementById('static-overlay');
             overlay.style.opacity = opacity;
 
-            // Apply Decay Filters
             const img = document.getElementById('room-img-display');
             let currentDecay = calculateDecay(r);
             
@@ -763,7 +700,6 @@
                  img.className = ""; 
             }
             
-            // Visual Feedback on Button
             const btn = document.getElementById('btn-save');
             if(opacity === 0) {
                 btn.style.background = "var(--accent)";
@@ -774,7 +710,6 @@
             }
         }
 
-        // --- INTELLIGENT MR OTHER LOGIC ---
         function updateResonance(r) {
             let multiplier = 1.0;
             let h = new Date().getHours();
@@ -799,13 +734,6 @@
             if(resonance > 50) img.classList.add('bowing-effect');
         }
 
-        function updateStatic(val) {
-            const overlay = document.getElementById('static-overlay');
-            let opacity = (val / 100) * 0.8;
-            overlay.style.opacity = opacity;
-        }
-
-        // --- CHAOS GRAMMAR ENGINE (NO SCIENCE WORDS) ---
         const VOCAB = {
             subjects: [
                 "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
@@ -828,7 +756,6 @@
                 "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
             
-            // CONTEXT TRIGGERS (UPDATED)
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
             self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
@@ -893,7 +820,6 @@
             renderJournal();
         }
 
-        // --- JOURNAL SYSTEM ---
         function renderJournal() {
             const feed = document.getElementById('journal-feed');
             feed.innerHTML = "";
