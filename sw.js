@@ -1,5 +1,5 @@
-// VERSION v15 - Organic Decay Update
-const CACHE_NAME = 'inbetween-v15';
+// VERSION v16 - Safety Fixes for Menu
+const CACHE_NAME = 'inbetween-v16';
 const ASSETS = [
   './',
   './index.html',
