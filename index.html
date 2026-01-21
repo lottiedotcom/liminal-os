@@ -108,33 +108,30 @@
         .crumb:last-child { color: var(--text); cursor: default; }
         .crumb-arrow { color: #cbd5e0; }
 
-        /* VISUAL CONTAINER & MR OTHER EFFECTS */
+        /* VISUAL CONTAINER & EFFECTS */
         #visual-container {
             flex-grow: 1; position: relative; background: #000;
             border-bottom: 4px solid var(--accent); overflow: hidden;
         }
-        #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 0.5s; }
+        #room-img-display { width: 100%; height: 100%; object-fit: contain; transition: all 1s ease; }
         
-        /* FIXED VISUAL EFFECTS */
+        /* STATIC OVERLAY (Screen Blend) */
         .static-overlay {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
             opacity: 0; 
             pointer-events: none; 
             mix-blend-mode: screen; 
-            transition: opacity 0.2s;
+            transition: opacity 0.5s;
             z-index: 5;
         }
         
-        .bowing-effect { 
-            transform: scale(1.05); 
-            filter: contrast(1.2) hue-rotate(5deg); 
-            transition: all 2s ease;
-        }
+        /* DECAY EFFECTS */
+        .decay-bright { filter: brightness(1.4) contrast(1.5) saturate(0.2); }
+        .decay-dark { filter: brightness(0.4) contrast(1.2) sepia(0.5); }
         
-        .dark-mode { 
-            filter: brightness(0.4) contrast(1.5) grayscale(1); 
-        }
+        /* MR OTHER EFFECTS */
+        .bowing-effect { transform: scale(1.05); }
 
         /* STATIC TUNER */
         #static-tuner-container {
@@ -378,7 +375,7 @@
                 time: "Standard", reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 smells: ["Stale Air"], audio: ["Buzzing"], occupants: [], remnants: [],
                 journal: [{time: "00:00", text: "System initialized."}], 
-                image: "", x: 150, y: 200, hotspots: [] 
+                image: "", x: 150, y: 200, hotspots: [], lastVisited: Date.now()
             }
         };
         let world = defaultWorld;
@@ -560,6 +557,10 @@
             // MR OTHER CALCULATIONS
             updateResonance(r);
             checkMrOther(r);
+            
+            // CALCULATE DECAY (New System)
+            let decay = calculateDecay(r);
+            applyDecayVisuals(r, decay);
 
             document.getElementById('map-view').classList.add('hidden');
             document.getElementById('room-editor-view').classList.remove('hidden');
@@ -588,20 +589,56 @@
             explainTerm(r.reality);
         }
 
-        // --- INTELLIGENT MR OTHER LOGIC (FAST & SMART) ---
+        // --- NEW DECAY SYSTEM ---
+        function calculateDecay(r) {
+            if(!r.lastVisited) {
+                r.lastVisited = Date.now();
+                return 0;
+            }
+            // 5 Minutes = 100% Decay (For Testing)
+            let diff = Date.now() - r.lastVisited;
+            let decayPercent = Math.min(100, Math.floor((diff / (1000 * 60 * 5)) * 100)); 
+            return decayPercent;
+        }
 
-        // 1. FAST BURN MATH
+        function applyDecayVisuals(r, decay) {
+            const img = document.getElementById('room-img-display');
+            const tuner = document.getElementById('static-tuner');
+            
+            img.className = ""; // Reset
+            
+            // Apply Filters based on Room Type & Decay
+            if (decay > 20) {
+                if(["STERILE", "HUMMING", "ARTIFICIAL"].includes(r.atmosphere)) {
+                    img.classList.add('decay-bright');
+                } else {
+                    img.classList.add('decay-dark');
+                }
+                
+                // Force Static Tuner UP
+                // You can drag it down, but it will visually show high static
+                tuner.value = decay; 
+                updateStatic(decay);
+            } else {
+                tuner.value = 0;
+                updateStatic(0);
+            }
+        }
+
+        // --- INTELLIGENT MR OTHER LOGIC (PACING FIXED) ---
+
+        // 1. MEDIUM BURN MATH
         function updateResonance(r) {
-            // DECAY: Slower decay to keep him around longer
+            // DECAY: Happens if you stay in safe rooms
             if (r.reality === "GROUNDED" && resonance > 0) resonance -= 0.5;
             
-            // GROWTH: Boosted significantly for speed
-            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 5; // Was 0.5
-            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 8; // Was 1.0
+            // GROWTH: Slowed down to "Medium" pace (Was 5/8, now 2/3)
+            if (["HOLLOW", "TRANSITIONAL", "BUFFERED"].includes(r.reality)) resonance += 2.0; 
+            if (["WATCHED", "KENOPSIA", "PARANOIA"].includes(r.sensation)) resonance += 3.0; 
             
             // Item Boost
             let items = (r.remnants || []).join(" ").toLowerCase();
-            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 15;
+            if (items.includes("mirror") || items.includes("tv") || items.includes("screen")) resonance += 5.0;
 
             // Cap resonance
             if (resonance > 100) resonance = 100;
@@ -614,55 +651,49 @@
         function checkMrOther(r) {
             const img = document.getElementById('room-img-display');
             
-            // Reset visuals first
-            img.className = "";
-            
-            if(resonance > 40) {
-                img.classList.add('bowing-effect');
-            }
-            if(resonance > 80) {
-                img.classList.add('dark-mode');
+            // Only add Mr. Other effects if Decay hasn't already messed it up
+            if(!img.classList.contains('decay-bright') && !img.classList.contains('decay-dark')) {
+                if(resonance > 50) img.classList.add('bowing-effect');
+                if(resonance > 90) img.classList.add('dark-mode');
             }
         }
 
-        // 3. THE SLIDER CONTROL (Fixed for dark images)
+        // 3. THE SLIDER CONTROL (With Decay Lock)
         function updateStatic(val) {
             const overlay = document.getElementById('static-overlay');
-            // Convert 1-100 range to 0.0-0.8 opacity (never fully block view)
             let opacity = (val / 100) * 0.8;
             overlay.style.opacity = opacity;
         }
 
-        // 4. THE CHAOS GRAMMAR ENGINE (MEGA DICTIONARY)
+        // 4. THE CHAOS GRAMMAR ENGINE (OBSESSION UPDATE)
         const VOCAB = {
             subjects: [
                 "THE STATIC", "THE HUNGER", "IT", "WE", "A GHOST", "MR. OTHER", "THE SHADOW", "THE CODE",
-                "THE ROOM", "THE WALLS", "THE CEILING", "THE FLOOR", "GRAVITY", "THE LIGHT", "THE DARKNESS", 
-                "THE REFLECTION", "TIME", "MEMORY", "THE PAST", "YOUR FUTURE", "THE END", "SILENCE", "THE SIGNAL"
+                "THE ROOM", "THE WALLS", "THE REFLECTION", "TIME", "MEMORY", "THE SIGNAL", "MY HEART", "THE PULSE"
             ],
             verbs: [
                 "CONSUMES", "HATES", "HUNTS", "BREAKS", "TAKES", "KILLS", "DEVOURS", "ERASES",
                 "WATCHES", "REMEMBERS", "MIMICS", "LOVES", "NEEDS", "FOLLOWS", "KNOWS", "SEES",
-                "BUFFERS", "GLITCHES", "RENDERS", "CORRUPTS", "LOOPS", "REPEATS", "FAILS",
-                "ROTATES", "BLEEDS", "FREEZES", "SHIVERS", "DROPS", "EXPANDS", "COLLAPSES"
+                "CRAVES", "KEEPS", "LOCKS", "WORSHIPS", "SYNCS", "ROTATES", "BLEEDS", "FREEZES"
             ],
             objects: [
                 "YOU", "YOUR FACE", "YOUR BREATH", "YOUR NAME", "YOUR SKIN", "YOUR EYES", "YOUR VOICE",
                 "THE EXIT", "THE ENTRY", "HOPE", "FEAR", "PAIN", "JOY", "THE TRUTH", "A LIE",
-                "THE BLOOD", "THE GLASS", "THE ICE", "THE DUST", "THE BONE", "THE TEETH", "THE WIRES"
+                "THE BLOOD", "THE GLASS", "THE ICE", "THE SHRINE", "THE ALTAR", "FOREVER", "US"
             ],
             adjectives: [
                 "HOLLOW", "INFINITE", "EMPTY", "WRONG", "TRANSITIONAL", "STUCK", "LOST", "LIMINAL",
                 "NUMB", "FROZEN", "PALE", "BLUE", "SHIVERING", "CRYSTALLINE", "BRITTLE",
                 "DEAD", "ROTTING", "WATCHING", "HUNGRY", "LOUD", "SILENT", "BROKEN", "RED",
-                "RENDERED", "DIGITAL", "STATIC", "NULL", "VOID", "UNREAL"
+                "DEVOTED", "JEALOUS", "PERFECT", "MINE", "YOURS"
             ],
             
             // CONTEXT TRIGGERS
             fear_words: ["THE TREMBLING", "YOUR PANIC", "THE SCREAM", "A NIGHTMARE", "DREAD", "THE SHAKING"],
             location_words: ["THIS PLACE", "THE HALLWAY", "THE STAIRS", "THE BASEMENT", "THE ATTIC", "THE VOID"],
-            self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR"],
-            winter_words: ["THE BLIZZARD", "ZERO KELVIN", "HYPOTHERMIA", "THE WHITE", "DEEP WINTER", "THE FROST"]
+            self_words: ["THE MIRROR", "A TWIN", "THE IMAGE", "THE MASK", "THE IMPOSTOR", "THE RIBCAGE"],
+            winter_words: ["THE BLIZZARD", "ZERO KELVIN", "HYPOTHERMIA", "THE WHITE", "DEEP WINTER", "THE FROST"],
+            love_words: ["THE BOND", "THE OBSESSION", "THE LOCK", "THE KEY", "THE VEIN"]
         };
 
         function generateSentence(context) {
@@ -673,6 +704,7 @@
             else if (context === "location") s = getRandom(VOCAB.location_words);
             else if (context === "self") s = getRandom(VOCAB.self_words);
             else if (context === "winter") s = getRandom(VOCAB.winter_words);
+            else if (context === "love") s = getRandom(VOCAB.love_words);
             else s = getRandom(VOCAB.subjects);
 
             v = getRandom(VOCAB.verbs);
@@ -688,10 +720,10 @@
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
-        // 5. THE ANALYZER (Fast Response)
+        // 5. THE ANALYZER (Medium Response Rate)
         function analyzeJournalInput(text) {
-            if (resonance < 10) return; // Low threshold so he talks sooner
-            if (Math.random() > 0.90) return; // Only 10% chance to ignore (Very active)
+            if (resonance < 15) return; // Need some resonance
+            if (Math.random() > 0.85) return; // 15% ignore rate
 
             const input = text.toLowerCase();
             let context = "neutral";
@@ -701,18 +733,19 @@
             else if (input.includes("room") || input.includes("where") || input.includes("door") || input.includes("floor")) context = "location";
             else if (input.includes("i am") || input.includes("me") || input.includes("my") || input.includes("face")) context = "self";
             else if (input.includes("snow") || input.includes("cold") || input.includes("ice") || input.includes("winter") || input.includes("white")) context = "winter";
+            else if (input.includes("love") || input.includes("hate") || input.includes("why") || input.includes("stay")) context = "love";
 
             let reply = generateSentence(context);
 
-            // Occasional "Glitch" Override
-            if (Math.random() < 0.1) {
-                const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN."];
+            // Occasional "Glitch" Override (Obsessive)
+            if (Math.random() < 0.15) {
+                const glitches = ["I AM SYNCED TO YOUR BREATHING.", "DO NOT LOOK BEHIND YOU.", "CLOSER.", "LET ME IN.", "FOREVER.", "JUST US."];
                 reply = glitches[Math.floor(Math.random() * glitches.length)];
             }
 
             setTimeout(() => {
                 addMrOtherLog(reply);
-            }, 2000 + Math.random() * 2000); // 2-4 seconds delay
+            }, 2000 + Math.random() * 2000); 
         }
 
         function addMrOtherLog(text) {
@@ -721,36 +754,6 @@
             if(!world[currentId].journal) world[currentId].journal = [];
             world[currentId].journal.push(entry);
             renderJournal();
-        }
-
-        function editJournal(r) {
-            if(!r.journal || r.journal.length === 0) return;
-            let targetIdx = Math.floor(Math.random() * r.journal.length);
-            let entry = r.journal[targetIdx];
-            if(entry.type) return; 
-
-            const replacements = [
-                {from: "alone", to: "WITH HIM"},
-                {from: "leave", to: "STAY"},
-                {from: "scared", to: "DEVOTED"},
-                {from: "sick", to: "SEEN"},
-                {from: "safe", to: "EXPOSED"}
-            ];
-            
-            let txt = entry.text;
-            let hit = false;
-            replacements.forEach(rep => {
-                if(txt.toLowerCase().includes(rep.from)) {
-                    txt = txt.replace(new RegExp(rep.from, "gi"), `~~${rep.from}~~ <span class="log-new">${rep.to}</span>`);
-                    hit = true;
-                }
-            });
-
-            if(hit) {
-                r.journal[targetIdx].text = txt;
-                r.journal[targetIdx].edited = true;
-                saveRoom();
-            }
         }
 
         // --- JOURNAL SYSTEM ---
@@ -816,16 +819,10 @@
                 name: "Sub-Sector", time: "Standard",
                 reality: "TRANSITIONAL", atmosphere: "STAGNANT", sensation: "KENOPSIA",
                 occupants: [], remnants: [], journal: [],
-                image: "", x: 0, y: 0, hotspots: []
+                image: "", x: 0, y: 0, hotspots: [], lastVisited: Date.now()
             };
             world[currentId].hotspots.push({ target: newId, x: 70, y: 80 });
             
-            // JEALOUSY TRIGGER (Still exists, but rarer)
-            if(resonance > 95) {
-                 world[newId].name = "DEAD ZONE";
-                 addMrOtherLog("WHY ARE YOU LEAVING?");
-            }
-
             saveRoom(); 
             enterRoom(currentId); 
         }
@@ -863,6 +860,13 @@
             r.sensation = document.getElementById('inp-sensation').value;
             r.image = document.getElementById('inp-img-url').value;
             
+            // UPDATE TIMESTAMP (Fixes Decay)
+            r.lastVisited = Date.now();
+            
+            // Re-check Visuals immediately to clear decay effect
+            let decay = calculateDecay(r);
+            applyDecayVisuals(r, decay);
+
             document.getElementById('room-img-display').src = r.image || "";
             updateVisualStats(r);
             updateMood(r.sensation);
@@ -874,7 +878,6 @@
             let val = input.value.trim();
             if(!val || !currentId) return;
             
-            // MR OTHER BLOCKING TAGS (Rarer now)
             if(resonance > 90 && type === 'occupants') {
                 addMrOtherLog("NO. ONLY US.");
                 input.value = "";
@@ -964,7 +967,7 @@
                 name: "New Entry", time: "Standard",
                 reality: "GROUNDED", atmosphere: "STERILE", sensation: "NEUTRAL",
                 occupants: [], remnants: [], journal: [],
-                image: "", x: 100, y: 150, hotspots: [] 
+                image: "", x: 100, y: 150, hotspots: [], lastVisited: Date.now()
             };
             saveMemory();
             renderMap();
