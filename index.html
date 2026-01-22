@@ -20,7 +20,7 @@
             --accent: #38b2ac;         /* Teal */
             --accent-fade: #e6fffa;    /* Light Teal */
             --border: #cbd5e0;
-            --danger: #260808;         /* Red for Mr. Other */
+            --danger: #e53e3e;         /* Red for Mr. Other */
             --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --mono: 'Courier New', Courier, monospace;
         }
@@ -405,7 +405,7 @@
                 <button class="btn-connect" onclick="createConnection()">+ CONNECTION</button>
             </div>
             
-            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()">EMERGENCY FLUSH</button>
+            <button id="btn-emergency" class="btn-emergency" onclick="emergencyFlush()" style="display:none;">EMERGENCY FLUSH</button>
         </div>
     </div>
 
@@ -422,6 +422,45 @@
                 };
             });
         }
+
+        // --- NEW STORAGE ENGINE (IndexedDB) ---
+        const ArtifactDB = {
+            db: null,
+            init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open("InbetweenArtifacts", 1);
+                    request.onupgradeneeded = (e) => {
+                        if (!e.target.result.objectStoreNames.contains("audio")) {
+                            e.target.result.createObjectStore("audio", { keyPath: "id" });
+                        }
+                    };
+                    request.onsuccess = (e) => {
+                        this.db = e.target.result;
+                        resolve();
+                    };
+                    request.onerror = (e) => reject(e);
+                });
+            },
+            save(id, blob) {
+                if(!this.db) return;
+                const tx = this.db.transaction("audio", "readwrite");
+                tx.objectStore("audio").put({ id: id, data: blob });
+            },
+            get(id) {
+                return new Promise((resolve) => {
+                    if(!this.db) return resolve(null);
+                    const tx = this.db.transaction("audio", "readonly");
+                    const req = tx.objectStore("audio").get(id);
+                    req.onsuccess = () => resolve(req.result ? req.result.data : null);
+                    req.onerror = () => resolve(null);
+                });
+            },
+            remove(id) {
+                if(!this.db) return;
+                const tx = this.db.transaction("audio", "readwrite");
+                tx.objectStore("audio").delete(id);
+            }
+        };
 
         // --- AUDIO ENGINE ---
         const SystemAudio = {
@@ -512,20 +551,24 @@
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
                 
-                if(world[currentId].audioData) {
-                    const start = parseFloat(world[currentId].audioStart) || 0;
-                    const len = parseFloat(world[currentId].audioLen) || 15;
-                    this.playCustom(world[currentId].audioData, start, len);
-                    return;
-                }
-
-                const r = world[currentId];
-                const mode = r.time || "Standard";
-                let buffer = this.pinkBuffer; let vol = 0.1; 
-                if (mode === "Glacial") { buffer = this.brownBuffer; vol = 0.25; } 
-                if (mode === "Rapid") { buffer = this.whiteBuffer; vol = 0.08; } 
-                if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
-                this.startAmbience(buffer, vol, 0.5);
+                // ASYNC CHECK FOR AUDIO
+                ArtifactDB.get(currentId).then(blob => {
+                    if(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const start = parseFloat(world[currentId].audioStart) || 0;
+                        const len = parseFloat(world[currentId].audioLen) || 15;
+                        this.playCustom(url, start, len);
+                    } else {
+                        // Standard Ambience
+                        const r = world[currentId];
+                        const mode = r.time || "Standard";
+                        let buffer = this.pinkBuffer; let vol = 0.1; 
+                        if (mode === "Glacial") { buffer = this.brownBuffer; vol = 0.25; } 
+                        if (mode === "Rapid") { buffer = this.whiteBuffer; vol = 0.08; } 
+                        if (mode === "Stagnant") { buffer = this.brownBuffer; vol = 0.05; } 
+                        this.startAmbience(buffer, vol, 0.5);
+                    }
+                });
             },
             
             playCustom(src, start, duration) {
@@ -547,9 +590,7 @@
                 this.customAudio.play().catch(e => console.log("Audio play error", e));
             },
             
-            playPurge() {
-                // No sound
-            },
+            playPurge() { },
             
             setVolume(level) {
                 if(this.ctx) this.ambienceGain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.5);
@@ -763,21 +804,24 @@
                 localStorage.setItem('inbetween_data', JSON.stringify(world)); 
                 localStorage.setItem('mr_other_resonance', resonance);
             } catch(e) {
-                alert("MEMORY FULL. AUDIO ARTIFACT TOO LARGE.");
+                // If text storage fails, likely because images were saved as text
+                alert("MEMORY WARNING. TEXT STORAGE FULL.");
             }
         }
 
         function bootUp() {
-            SystemAudio.init(); 
-            if(SystemAudio.ctx) SystemAudio.ctx.resume();
-            SystemAudio.playOSAmbience();
-            MrOtherAI.init(); 
-            
-            loadMemory();
-            document.getElementById('boot-screen').classList.add('hidden');
-            document.getElementById('map-view').classList.remove('hidden');
-            renderMap();
-            initMetaTriggers();
+            ArtifactDB.init().then(() => {
+                SystemAudio.init(); 
+                if(SystemAudio.ctx) SystemAudio.ctx.resume();
+                SystemAudio.playOSAmbience();
+                MrOtherAI.init(); 
+                
+                loadMemory();
+                document.getElementById('boot-screen').classList.add('hidden');
+                document.getElementById('map-view').classList.remove('hidden');
+                renderMap();
+                initMetaTriggers();
+            });
         }
 
         function initMetaTriggers() {
@@ -979,12 +1023,11 @@
 
                     let depth = getDepth(id);
                     if (depth >= 3) {
-                        document.getElementById('nav-bar').innerHTML = `<span class="crumb-lost">SIGNAL LOST</span>`;
                         document.getElementById('btn-emergency').style.display = "block";
                     } else {
-                        renderBreadcrumbs(id);
                         document.getElementById('btn-emergency').style.display = "none";
                     }
+                    renderBreadcrumbs(id);
 
                     document.getElementById('map-view').classList.add('hidden');
                     document.getElementById('room-editor-view').classList.remove('hidden');
@@ -995,12 +1038,12 @@
                     document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
                     document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
                     
-                    // LOAD AUDIO SETTINGS
-                    if(r.audioData) {
-                        document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
-                    } else {
-                        document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
-                    }
+                    // CHECK AUDIO ARTIFACT
+                    ArtifactDB.get(id).then(blob => {
+                        if(blob) document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
+                        else document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
+                    });
+                    
                     document.getElementById('inp-audio-start').value = r.audioStart || 0;
                     document.getElementById('inp-audio-len').value = r.audioLen || 15;
 
@@ -1124,24 +1167,44 @@
             saveRoom(); enterRoom(currentId); 
         }
 
+        function attemptNavigation(targetId) {
+            saveRoom();
+            let depth = getDepth(currentId);
+            let chance = 0;
+            if (depth >= 2) chance = (depth - 1) * 0.15; 
+            if (chance > 0.8) chance = 0.8;
+            if (resonance > 80) chance += 0.1;
+
+            if (Math.random() < chance && targetId !== 'origin') {
+                let allRooms = Object.keys(world);
+                let randomRoom = allRooms[Math.floor(Math.random() * allRooms.length)];
+                addMrOtherLog("LOST.");
+                enterRoom(randomRoom);
+            } else {
+                enterRoom(targetId);
+            }
+        }
+
         function renderBreadcrumbs(id) {
             let path = []; let curr = world[id];
             while(curr) { path.unshift({id: curr.id, name: curr.name}); if(curr.parentId) curr = world[curr.parentId]; else curr = null; }
             let nav = document.getElementById('nav-bar');
             nav.innerHTML = `<span class="crumb" onclick="closeEditor(this)">MAP</span>`;
-            path.forEach(node => { nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="saveRoom(); enterRoom('${node.id}')">${node.name}</span>`; });
+            path.forEach(node => { 
+                nav.innerHTML += ` <span class="crumb-arrow">/</span> <span class="crumb" onclick="attemptNavigation('${node.id}')">${node.name}</span>`; 
+            });
         }
 
         function closeEditor(btn) {
+            saveRoom();
             try {
-                if(Math.random() > 0.7) {
-                    btn.innerText = "STAY";
-                    btn.classList.add("crumb-glitch");
-                    setTimeout(() => {
-                        btn.innerText = "MAP";
-                        btn.classList.remove("crumb-glitch");
-                        performClose();
-                    }, 500);
+                let depth = getDepth(currentId);
+                let chance = (depth - 1) * 0.15;
+                if(Math.random() < chance) {
+                    let allRooms = Object.keys(world);
+                    let randomRoom = allRooms[Math.floor(Math.random() * allRooms.length)];
+                    if(btn) { btn.innerText = "NO."; btn.classList.add("crumb-glitch"); }
+                    setTimeout(() => { enterRoom(randomRoom); }, 500);
                 } else {
                     performClose();
                 }
@@ -1149,7 +1212,6 @@
         }
         
         function performClose() {
-            saveRoom();
             SystemAudio.stopAll();
             SystemAudio.playOSAmbience();
             if(clockInterval) clearInterval(clockInterval);
@@ -1211,7 +1273,7 @@
                 }
             });
             element.addEventListener('touchend', (e) => {
-                if (!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
+                if (!isDragging) { saveRoom(); attemptNavigation(world[currentId].hotspots[index].target); }
                 else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
             });
             element.onmousedown = (e) => {
@@ -1226,7 +1288,7 @@
                 };
                 document.onmouseup = () => {
                     document.onmousemove = null; document.onmouseup = null;
-                    if(!isDragging) { saveRoom(); enterRoom(world[currentId].hotspots[index].target); }
+                    if(!isDragging) { saveRoom(); attemptNavigation(world[currentId].hotspots[index].target); }
                     else { world[currentId].hotspots[index].x = parseFloat(element.style.left); world[currentId].hotspots[index].y = parseFloat(element.style.top); saveRoom(); }
                 };
             };
@@ -1275,24 +1337,27 @@
             };
         }
 
+        // --- UPDATED FILE HANDLER (SAVES TO INDEXEDDB) ---
         document.getElementById('inp-audio').addEventListener('change', function() {
             if(this.files && this.files[0]) {
-                let reader = new FileReader();
-                reader.onload = (e) => {
-                    if(!world[currentId]) return;
-                    world[currentId].audioData = e.target.result;
-                    document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
-                    SystemAudio.updateRoomAmbience();
-                    addMrOtherLog("I HEAR IT.");
-                    saveMemory();
-                };
-                reader.readAsDataURL(this.files[0]);
+                if(!world[currentId]) return;
+                // Save Blob to IndexedDB
+                ArtifactDB.save(currentId, this.files[0]);
+                
+                document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
+                SystemAudio.updateRoomAmbience();
+                addMrOtherLog("I HEAR IT.");
+                
+                // Flag room as having audio (but don't save the file in localstorage)
+                world[currentId].hasAudio = true;
+                saveMemory();
             }
         });
 
         function clearCustomAudio() {
             if(!world[currentId]) return;
-            delete world[currentId].audioData;
+            ArtifactDB.remove(currentId);
+            delete world[currentId].hasAudio;
             document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
             document.getElementById('inp-audio').value = "";
             SystemAudio.updateRoomAmbience();
