@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v16.0-UI-REORDER';
+const CACHE_NAME = 'inbetween-v18.0-STORAGE-FIX';
 const ASSETS = [
   './',
   './index.html',
