@@ -423,15 +423,20 @@
             });
         }
 
-        // --- NEW STORAGE ENGINE (IndexedDB) ---
+        // --- NEW STORAGE ENGINE (IndexedDB v2 - Audio AND Images) ---
         const ArtifactDB = {
             db: null,
             init() {
                 return new Promise((resolve, reject) => {
-                    const request = indexedDB.open("InbetweenArtifacts", 1);
+                    // Bump version to 2 to trigger upgrade for images
+                    const request = indexedDB.open("InbetweenArtifacts", 2);
                     request.onupgradeneeded = (e) => {
-                        if (!e.target.result.objectStoreNames.contains("audio")) {
-                            e.target.result.createObjectStore("audio", { keyPath: "id" });
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains("audio")) {
+                            db.createObjectStore("audio", { keyPath: "id" });
+                        }
+                        if (!db.objectStoreNames.contains("images")) {
+                            db.createObjectStore("images", { keyPath: "id" });
                         }
                     };
                     request.onsuccess = (e) => {
@@ -441,24 +446,24 @@
                     request.onerror = (e) => reject(e);
                 });
             },
-            save(id, blob) {
+            save(storeName, id, blob) {
                 if(!this.db) return;
-                const tx = this.db.transaction("audio", "readwrite");
-                tx.objectStore("audio").put({ id: id, data: blob });
+                const tx = this.db.transaction(storeName, "readwrite");
+                tx.objectStore(storeName).put({ id: id, data: blob });
             },
-            get(id) {
+            get(storeName, id) {
                 return new Promise((resolve) => {
                     if(!this.db) return resolve(null);
-                    const tx = this.db.transaction("audio", "readonly");
-                    const req = tx.objectStore("audio").get(id);
+                    const tx = this.db.transaction(storeName, "readonly");
+                    const req = tx.objectStore(storeName).get(id);
                     req.onsuccess = () => resolve(req.result ? req.result.data : null);
                     req.onerror = () => resolve(null);
                 });
             },
-            remove(id) {
+            remove(storeName, id) {
                 if(!this.db) return;
-                const tx = this.db.transaction("audio", "readwrite");
-                tx.objectStore("audio").delete(id);
+                const tx = this.db.transaction(storeName, "readwrite");
+                tx.objectStore(storeName).delete(id);
             }
         };
 
@@ -551,15 +556,13 @@
             updateRoomAmbience() {
                 if(!currentId || !this.ctx) return;
                 
-                // ASYNC CHECK FOR AUDIO
-                ArtifactDB.get(currentId).then(blob => {
+                ArtifactDB.get("audio", currentId).then(blob => {
                     if(blob) {
                         const url = URL.createObjectURL(blob);
                         const start = parseFloat(world[currentId].audioStart) || 0;
                         const len = parseFloat(world[currentId].audioLen) || 15;
                         this.playCustom(url, start, len);
                     } else {
-                        // Standard Ambience
                         const r = world[currentId];
                         const mode = r.time || "Standard";
                         let buffer = this.pinkBuffer; let vol = 0.1; 
@@ -804,8 +807,8 @@
                 localStorage.setItem('inbetween_data', JSON.stringify(world)); 
                 localStorage.setItem('mr_other_resonance', resonance);
             } catch(e) {
-                // If text storage fails, likely because images were saved as text
-                alert("MEMORY WARNING. TEXT STORAGE FULL.");
+                // Should not happen now that images are in DB
+                console.log("Save error: " + e);
             }
         }
 
@@ -909,7 +912,17 @@
                     el.style.left = r.x + 'px';
                     el.style.top = r.y + 'px';
                     
-                    let imgHTML = r.image ? `<img src="${r.image}">` : `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
+                    let imgHTML = `<span style="color:#cbd5e0; font-size:24px;">+</span>`;
+                    let elIcon = el; // capture closure
+                    
+                    // Async load thumbnail if exists
+                    ArtifactDB.get("images", key).then(blob => {
+                       if(blob) {
+                           let url = URL.createObjectURL(blob);
+                           elIcon.querySelector('.icon-box').innerHTML = `<img src="${url}">`;
+                       }
+                    });
+
                     let label = r.name;
                     if(resonance > 20 && Math.random() > 0.5) label += ` <span class="ghost-tag">(OURS)</span>`;
                     el.innerHTML = `<div class="icon-box">${imgHTML}</div><div class="icon-label">${label}</div>`;
@@ -1038,8 +1051,8 @@
                     document.getElementById('inp-atmosphere').value = r.atmosphere || "STERILE";
                     document.getElementById('inp-sensation').value = r.sensation || "NEUTRAL";
                     
-                    // CHECK AUDIO ARTIFACT
-                    ArtifactDB.get(id).then(blob => {
+                    // LOAD AUDIO SETTINGS
+                    ArtifactDB.get("audio", id).then(blob => {
                         if(blob) document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
                         else document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
                     });
@@ -1051,8 +1064,15 @@
                     updateMood(r.sensation || "NEUTRAL");
                     startClock(); 
 
-                    document.getElementById('inp-img-url').value = r.image || "";
-                    document.getElementById('room-img-display').src = r.image || "";
+                    // LOAD IMAGE FROM DB
+                    ArtifactDB.get("images", id).then(blob => {
+                        if(blob) {
+                            let url = URL.createObjectURL(blob);
+                            document.getElementById('room-img-display').src = url;
+                        } else {
+                            document.getElementById('room-img-display').src = "";
+                        }
+                    });
 
                     renderTags('list-occupants', r.occupants || []);
                     renderTags('list-remnants', r.remnants || []);
@@ -1228,7 +1248,7 @@
             r.reality = document.getElementById('inp-reality').value;
             r.atmosphere = document.getElementById('inp-atmosphere').value;
             r.sensation = document.getElementById('inp-sensation').value;
-            r.image = document.getElementById('inp-img-url').value;
+            // Removed image saving here - it's handled by onChange
             r.audioStart = document.getElementById('inp-audio-start').value;
             r.audioLen = document.getElementById('inp-audio-len').value;
             
@@ -1241,7 +1261,6 @@
                 SystemAudio.playPurge();
             } else { addMrOtherLog("SIGNAL LOST."); }
 
-            document.getElementById('room-img-display').src = r.image || "";
             updateVisualStats(r); updateMood(r.sensation); saveMemory();
         }
 
@@ -1303,60 +1322,41 @@
 
         function setupSmartClick(element, id) {
             let startX, startY, isDragging = false;
-            
-            element.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                isDragging = false;
-            }, {passive: false});
-
-            element.addEventListener('touchmove', (e) => {
-                let x = e.touches[0].clientX;
-                let y = e.touches[0].clientY;
-                if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) {
-                    isDragging = true;
-                    element.style.left = (x - 40) + 'px';
-                    element.style.top = (y - 50) + 'px';
-                }
-            }, {passive: false});
-
-            element.addEventListener('touchend', (e) => {
-                if (isDragging) {
-                    world[id].x = parseInt(element.style.left);
-                    world[id].y = parseInt(element.style.top);
-                    saveMemory();
-                } else {
-                    enterRoom(id);
-                }
-            });
-
-            element.onmousedown = (e) => {
-                startX = e.clientX; isDragging = false;
-                document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) { isDragging = true; element.style.left = (ev.clientX - 40) + 'px'; element.style.top = (ev.clientY - 50) + 'px'; } };
-                document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } };
-            };
+            element.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; isDragging = false; }, {passive: false});
+            element.addEventListener('touchmove', (e) => { let x = e.touches[0].clientX; let y = e.touches[0].clientY; if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) { isDragging = true; element.style.left = (x - 40) + 'px'; element.style.top = (y - 50) + 'px'; } }, {passive: false});
+            element.addEventListener('touchend', (e) => { if (isDragging) { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } else { enterRoom(id); } });
+            element.onmousedown = (e) => { startX = e.clientX; isDragging = false; document.onmousemove = (ev) => { if(Math.abs(ev.clientX - startX) > 5) { isDragging = true; element.style.left = (ev.clientX - 40) + 'px'; element.style.top = (ev.clientY - 50) + 'px'; } }; document.onmouseup = () => { document.onmousemove = null; document.onmouseup = null; if(!isDragging) enterRoom(id); else { world[id].x = parseInt(element.style.left); world[id].y = parseInt(element.style.top); saveMemory(); } }; };
         }
 
         // --- UPDATED FILE HANDLER (SAVES TO INDEXEDDB) ---
         document.getElementById('inp-audio').addEventListener('change', function() {
             if(this.files && this.files[0]) {
                 if(!world[currentId]) return;
-                // Save Blob to IndexedDB
-                ArtifactDB.save(currentId, this.files[0]);
-                
+                ArtifactDB.save("audio", currentId, this.files[0]);
                 document.getElementById('audio-status').innerText = "AUDIO ARTIFACT LOADED";
                 SystemAudio.updateRoomAmbience();
                 addMrOtherLog("I HEAR IT.");
-                
-                // Flag room as having audio (but don't save the file in localstorage)
                 world[currentId].hasAudio = true;
+                saveMemory();
+            }
+        });
+
+        document.getElementById('inp-file').addEventListener('change', function() {
+            if(this.files && this.files[0]) {
+                if(!world[currentId]) return;
+                ArtifactDB.save("images", currentId, this.files[0]);
+                // Preview immediately
+                let url = URL.createObjectURL(this.files[0]);
+                document.getElementById('room-img-display').src = url;
+                // No longer saving to world[id].image to save space
+                delete world[currentId].image; 
                 saveMemory();
             }
         });
 
         function clearCustomAudio() {
             if(!world[currentId]) return;
-            ArtifactDB.remove(currentId);
+            ArtifactDB.remove("audio", currentId);
             delete world[currentId].hasAudio;
             document.getElementById('audio-status').innerText = "NO ARTIFACT FOUND";
             document.getElementById('inp-audio').value = "";
@@ -1370,17 +1370,9 @@
             const len = parseFloat(document.getElementById('inp-audio-len').value);
             world[currentId].audioStart = start;
             world[currentId].audioLen = len;
-            SystemAudio.updateRoomAmbience(); // Refresh to hear changes immediately
+            SystemAudio.updateRoomAmbience();
             saveMemory();
         }
-
-        document.getElementById('inp-file').addEventListener('change', function() {
-            if(this.files && this.files[0]) {
-                let reader = new FileReader();
-                reader.onload = (e) => { document.getElementById('inp-img-url').value = e.target.result; document.getElementById('room-img-display').src = e.target.result; };
-                reader.readAsDataURL(this.files[0]);
-            }
-        });
     </script>
 </body>
 </html>
