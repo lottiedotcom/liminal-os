@@ -1,4 +1,4 @@
-const CACHE_NAME = 'inbetween-v18.0-STORAGE-FIX';
+const CACHE_NAME = 'inbetween-v19.0-MEDIA-VAULT';
 const ASSETS = [
   './',
   './index.html',
